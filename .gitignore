@@ -11,3 +11,6 @@ dist-ssr
 npm-debug.log*
 yarn-error.log*
 tsconfig.tsbuildinfo
+
+# Lockfile regenerable con `npm install` (CI usa npm install, no npm ci)
+package-lock.json
