@@ -1,0 +1,360 @@
+// ============================================================================
+// Move yA — Esquema de Base de Datos (MVP)
+// Modelo relacional multi-tenant para gestión de estudios de Pilates.
+//
+// Relación central pedida:
+//   Estudio (Studio) <-> Paquetes (Package) <-> Usuarios (User)
+//     <-> Reservas (Booking) <-> Gamificación (StarLedger / Reward)
+//
+// Motor: PostgreSQL (escalable). Para desarrollo local puede usarse SQLite
+// cambiando el provider a "sqlite".
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------------------------
+
+enum Role {
+  STUDIO_ADMIN // Estudio (Admin) — gestión total
+  COACH        // Coach — acceso restringido
+  STUDENT      // Usuario / Alumno
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE   // Pago mensual vencido -> bloquea panel del Estudio
+  CANCELED
+  TRIALING
+}
+
+enum BookingStatus {
+  RESERVED
+  ATTENDED   // Genera estrellas de gamificación
+  CANCELED
+  NO_SHOW
+}
+
+enum OptionalServiceType {
+  NUTRITION      // Nutrición
+  KINESIOLOGY    // Kinesiología
+  SPORTS_MEDICINE // Medicina Deportiva
+}
+
+enum ClassStatus {
+  SCHEDULED
+  CANCELED
+  COMPLETED
+}
+
+// ---------------------------------------------------------------------------
+// TENANT: ESTUDIO
+// El CEU (Código de Estudio Único) vincula a cada usuario con su estudio.
+// ---------------------------------------------------------------------------
+
+model Studio {
+  id        String   @id @default(cuid())
+  name      String
+  ceuCode   String   @unique // Código de Estudio Único usado en el onboarding
+  email     String
+  phone     String?
+  timezone  String   @default("America/Mexico_City")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // White-label / branding
+  branding     StudioBranding?
+  // Configuración de servicios opcionales (toggles)
+  serviceConfig StudioServiceConfig?
+  // Suscripción SaaS ($34 USD/mes) — obligatoria para el panel Admin
+  subscription Subscription?
+
+  // Relaciones (multi-tenant: todo cuelga del estudio)
+  users          User[]
+  packages       Package[]
+  classTemplates ClassTemplate[]
+  classSessions  ClassSession[]
+  rewards        Reward[]
+
+  @@index([ceuCode])
+}
+
+model StudioBranding {
+  id            String  @id @default(cuid())
+  studioId      String  @unique
+  studio        Studio  @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  primaryColor  String  @default("#2D5A4C") // Verde Bosque
+  secondaryColor String @default("#F4F1EA") // Crema
+  accentColor   String  @default("#333333") // Gris Oscuro
+  fontFamily    String  @default("Inter")
+  logoUrl       String?
+  heroPhotoUrl  String?
+  introVideoUrl String? // Video de marca de la pantalla de inicio
+}
+
+model StudioServiceConfig {
+  id                String  @id @default(cuid())
+  studioId          String  @unique
+  studio            Studio  @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  nutritionEnabled       Boolean @default(false)
+  kinesiologyEnabled     Boolean @default(false)
+  sportsMedicineEnabled  Boolean @default(false)
+}
+
+// ---------------------------------------------------------------------------
+// SUSCRIPCIÓN SAAS — verificación de pago mensual
+// ---------------------------------------------------------------------------
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  studioId           String             @unique
+  studio             Studio             @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  status             SubscriptionStatus @default(TRIALING)
+  priceUsd           Int                @default(34) // $34 USD/mes
+  currentPeriodEnd   DateTime           // fecha límite de acceso; si expira -> PAST_DUE
+  provider           String             @default("stripe")
+  providerCustomerId String?
+  createdAt          DateTime           @default(now())
+
+  payments Payment[]
+}
+
+model Payment {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  amountUsd      Int
+  paidAt         DateTime     @default(now())
+  periodStart    DateTime
+  periodEnd      DateTime
+  status         String       @default("succeeded")
+}
+
+// ---------------------------------------------------------------------------
+// USUARIOS (multirrol dentro de un estudio)
+// ---------------------------------------------------------------------------
+
+model User {
+  id         String   @id @default(cuid())
+  studioId   String
+  studio     Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  role       Role
+  fullName   String
+  email      String
+  phone      String?
+  avatarUrl  String?
+  passwordHash String?
+  createdAt  DateTime @default(now())
+
+  // Perfil de coach (bio) — solo aplica a role = COACH
+  coachProfile   CoachProfile?
+  taughtSessions ClassSession[] @relation("CoachSessions")
+
+  // Alumno
+  userPackages     UserPackage[]
+  bookings         Booking[]
+  starLedger       StarLedger[]
+  goals            Goal[]
+  redemptions      RewardRedemption[]
+  serviceBookings  ServiceBooking[]
+
+  // Un email es único por estudio (multi-tenant)
+  @@unique([studioId, email])
+  @@index([studioId, role])
+}
+
+model CoachProfile {
+  id           String  @id @default(cuid())
+  userId       String  @unique
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio          String?
+  specialties  String? // CSV o JSON de especialidades
+  yearsExp     Int?
+}
+
+// ---------------------------------------------------------------------------
+// PAQUETES — el estudio define precio, vigencia y clases participantes
+// ---------------------------------------------------------------------------
+
+model Package {
+  id            String   @id @default(cuid())
+  studioId      String
+  studio        Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  priceUsd      Int
+  classCredits  Int      // número de clases incluidas
+  validityDays  Int      // vigencia en días desde la compra
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  // Qué plantillas de clase participan en el paquete (M:N)
+  eligibleClasses ClassTemplate[] @relation("PackageEligibleClasses")
+  userPackages    UserPackage[]
+
+  @@index([studioId])
+}
+
+// Instancia de un paquete comprado por un alumno
+model UserPackage {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packageId      String
+  package        Package  @relation(fields: [packageId], references: [id])
+  creditsTotal   Int
+  creditsUsed    Int      @default(0)
+  purchasedAt    DateTime @default(now())
+  expiresAt      DateTime
+  active         Boolean  @default(true)
+
+  bookings Booking[]
+
+  @@index([userId, active])
+}
+
+// ---------------------------------------------------------------------------
+// CLASES Y CALENDARIO
+// ---------------------------------------------------------------------------
+
+// Plantilla / tipo de clase (Reformer, Mat, etc.)
+model ClassTemplate {
+  id          String   @id @default(cuid())
+  studioId    String
+  studio      Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  durationMin Int      @default(50)
+  colorHex    String   @default("#2D5A4C")
+
+  packages Package[]      @relation("PackageEligibleClasses")
+  sessions ClassSession[]
+
+  @@index([studioId])
+}
+
+// Sesión concreta agendada en el calendario
+model ClassSession {
+  id         String      @id @default(cuid())
+  studioId   String
+  studio     Studio      @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  templateId String
+  template   ClassTemplate @relation(fields: [templateId], references: [id])
+  coachId    String?
+  coach      User?       @relation("CoachSessions", fields: [coachId], references: [id])
+  startsAt   DateTime
+  endsAt     DateTime
+  capacity   Int         @default(10) // usado para "Quedan X lugares"
+  status     ClassStatus @default(SCHEDULED)
+
+  bookings Booking[]
+
+  @@index([studioId, startsAt])
+}
+
+// ---------------------------------------------------------------------------
+// RESERVAS — enlazan Usuario + Sesión + Paquete usado
+// ---------------------------------------------------------------------------
+
+model Booking {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId     String
+  session       ClassSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userPackageId String?
+  userPackage   UserPackage?  @relation(fields: [userPackageId], references: [id])
+  status        BookingStatus @default(RESERVED)
+  createdAt     DateTime      @default(now())
+  checkedInAt   DateTime?
+
+  starEntry StarLedger?
+
+  // Un alumno no puede reservar dos veces la misma sesión
+  @@unique([userId, sessionId])
+  @@index([sessionId])
+}
+
+// ---------------------------------------------------------------------------
+// GAMIFICACIÓN — estrellas por asistencia + canje de recompensas
+// ---------------------------------------------------------------------------
+
+// Libro mayor de estrellas: cada asistencia suma; cada canje resta.
+model StarLedger {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingId String?  @unique
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+  delta     Int      // +N por asistencia, -N por canje
+  reason    String   // "attendance" | "redemption" | "bonus"
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Catálogo de recompensas que define el estudio
+model Reward {
+  id         String   @id @default(cuid())
+  studioId   String
+  studio     Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  name       String
+  description String?
+  starCost   Int
+  active     Boolean  @default(true)
+
+  redemptions RewardRedemption[]
+}
+
+model RewardRedemption {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rewardId   String
+  reward     Reward   @relation(fields: [rewardId], references: [id])
+  starsSpent Int
+  redeemedAt DateTime @default(now())
+  fulfilled  Boolean  @default(false)
+}
+
+// ---------------------------------------------------------------------------
+// METAS DEL ALUMNO (historial de metas)
+// ---------------------------------------------------------------------------
+
+model Goal {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  targetValue Int      // ej. 12 clases al mes
+  currentValue Int     @default(0)
+  periodStart DateTime
+  periodEnd   DateTime
+  achieved    Boolean  @default(false)
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// SERVICIOS OPCIONALES (Nutrición, Kinesiología, Medicina Deportiva)
+// ---------------------------------------------------------------------------
+
+model ServiceBooking {
+  id          String              @id @default(cuid())
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceType OptionalServiceType
+  scheduledAt DateTime
+  notes       String?
+  status      BookingStatus       @default(RESERVED)
+
+  @@index([userId])
+}
