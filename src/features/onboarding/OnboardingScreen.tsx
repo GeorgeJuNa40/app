@@ -37,24 +37,9 @@ export default function OnboardingScreen() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
-      {/* Panel de marca / "video" */}
-      <div className="relative hidden lg:flex flex-col justify-between bg-forest text-cream p-12 overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          {/* Círculos concéntricos animados que evocan el "video de marca / fluidez" */}
-          <div className="brand-pulse absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cream" />
-          <div className="brand-pulse absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cream [animation-delay:1s]" />
-          <div className="brand-pulse absolute left-1/2 top-1/2 h-[32rem] w-[32rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cream [animation-delay:2s]" />
-        </div>
-        <div className="relative">
-          <p className="text-sm tracking-[0.3em] uppercase opacity-80">Pilates · Bienestar</p>
-        </div>
-        <div className="relative text-center">
-          <div className="brand-float text-6xl font-black tracking-tight">Move yA</div>
-          <p className="mt-4 text-cream/80 max-w-sm mx-auto">
-            La plataforma que fluye con tu estudio. Reserva, gestiona y crece.
-          </p>
-        </div>
-        <div className="relative text-xs opacity-70">© {new Date().getFullYear()} Move yA</div>
+      {/* Panel de marca — solo el logo, limpio */}
+      <div className="hidden lg:flex items-center justify-center bg-forest text-cream p-12">
+        <div className="brand-float text-6xl font-black tracking-tight">Move yA</div>
       </div>
 
       {/* Panel de acceso */}
@@ -122,9 +107,7 @@ export default function OnboardingScreen() {
 
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to {opacity:1;transform:none;} }
-        @keyframes brandPulse { 0%{transform:translate(-50%,-50%) scale(.8);opacity:.6;} 100%{transform:translate(-50%,-50%) scale(1.15);opacity:0;} }
         @keyframes brandFloat { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);} }
-        .brand-pulse{ animation: brandPulse 3s ease-out infinite; }
         .brand-float{ animation: brandFloat 4s ease-in-out infinite; }
       `}</style>
     </div>
