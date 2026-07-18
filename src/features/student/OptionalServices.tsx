@@ -1,53 +1,39 @@
 import { useStore } from '../../lib/store';
 import { PageHeader, Card, Button, EmptyState } from '../../components/ui';
 
-// Alumno: acceso a servicios opcionales, según los toggles activados por el estudio.
-const SERVICES = [
-  {
-    key: 'nutritionEnabled' as const,
-    title: 'Nutrición',
-    icon: '🥗',
-    desc: 'Planes de alimentación y seguimiento con nuestro nutriólogo.',
-  },
-  {
-    key: 'kinesiologyEnabled' as const,
-    title: 'Kinesiología',
-    icon: '🦵',
-    desc: 'Rehabilitación, movilidad y prevención de lesiones.',
-  },
-  {
-    key: 'sportsMedicineEnabled' as const,
-    title: 'Medicina Deportiva',
-    icon: '🩺',
-    desc: 'Valoración médica y optimización del rendimiento.',
-  },
-];
-
+// Alumno: servicios opcionales activados por el estudio + contacto por WhatsApp.
 export default function OptionalServices() {
   const { currentStudio } = useStore();
-  const cfg = currentStudio!.serviceConfig;
-  const available = SERVICES.filter((s) => cfg[s.key]);
+  const services = currentStudio!.services.filter((s) => s.enabled);
+  const wa = currentStudio!.whatsapp.number;
+
+  const waLink = (service: string) =>
+    wa ? `https://wa.me/${wa}?text=${encodeURIComponent(`Hola, quiero información sobre el servicio de ${service}.`)}` : undefined;
 
   return (
     <>
-      <PageHeader
-        title="Servicios"
-        subtitle="Bienestar integral más allá de la clase"
-      />
-      {available.length === 0 ? (
+      <PageHeader title="Servicios" subtitle="Bienestar integral más allá de la clase" />
+      {services.length === 0 ? (
         <EmptyState>Tu estudio aún no ha activado servicios opcionales.</EmptyState>
       ) : (
         <div className="grid gap-4 md:grid-cols-3">
-          {available.map((s) => (
-            <Card key={s.key} className="p-6 flex flex-col">
-              <div className="text-4xl">{s.icon}</div>
-              <h3 className="mt-3 font-semibold text-ink">{s.title}</h3>
-              <p className="text-sm text-ink-faint mt-1 flex-1">{s.desc}</p>
-              <Button className="mt-4" variant="secondary">
-                Agendar sesión
-              </Button>
-            </Card>
-          ))}
+          {services.map((s) => {
+            const link = waLink(s.name);
+            return (
+              <Card key={s.id} className="p-6 flex flex-col">
+                <div className="text-4xl">✚</div>
+                <h3 className="mt-3 font-semibold text-ink">{s.name}</h3>
+                <p className="text-sm text-ink-faint mt-1 flex-1">{s.description}</p>
+                {link ? (
+                  <a href={link} target="_blank" rel="noreferrer" className="mt-4">
+                    <Button className="w-full">Agendar por WhatsApp</Button>
+                  </a>
+                ) : (
+                  <Button className="mt-4" variant="secondary" disabled>WhatsApp no disponible</Button>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
     </>
