@@ -78,6 +78,7 @@ export interface User {
   email: string;
   phone: string;
   avatarInitials: string;
+  avatarUrl?: string; // foto de perfil (subida como archivo)
   createdAt: string;
   coachProfile?: CoachProfile;
   coachStatus?: CoachStatus; // solo coaches
