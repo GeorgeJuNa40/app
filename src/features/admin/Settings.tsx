@@ -1,20 +1,15 @@
-import { useState } from 'react';
 import { useStore } from '../../lib/store';
-import { PageHeader, Card, Button } from '../../components/ui';
+import { PageHeader, Card } from '../../components/ui';
+import ImageUpload from '../../components/ImageUpload';
 
 // Configuración: datos del negocio, fotos y White-label (branding).
 export default function Settings() {
   const { currentStudio, updateStudio, updateBranding } = useStore();
   const s = currentStudio!;
   const b = s.branding;
-  const [photoUrl, setPhotoUrl] = useState('');
   const fonts = ['Inter', 'Georgia', 'Poppins', 'system-ui'];
 
-  const addPhoto = () => {
-    if (!photoUrl.trim()) return;
-    updateStudio({ photos: [...s.photos, photoUrl.trim()] });
-    setPhotoUrl('');
-  };
+  const addPhoto = (dataUrl: string) => updateStudio({ photos: [...s.photos, dataUrl] });
   const removePhoto = (i: number) => updateStudio({ photos: s.photos.filter((_, idx) => idx !== i) });
 
   return (
@@ -44,17 +39,14 @@ export default function Settings() {
         {/* Fotos */}
         <Card className="p-6">
           <h2 className="font-semibold text-ink mb-3">Fotos del estudio</h2>
-          <div className="flex gap-2 mb-4">
-            <input className="input" placeholder="URL de imagen https://…" value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} />
-            <Button onClick={addPhoto}>Agregar</Button>
-          </div>
+          <ImageUpload variant="dropzone" label="Subir foto desde tu dispositivo" className="w-full mb-4" onSelect={addPhoto} />
           {s.photos.length === 0 ? (
             <div className="rounded-xl border border-dashed border-cream-dark p-8 text-center text-ink-faint text-sm">Aún no has agregado fotos.</div>
           ) : (
             <div className="grid grid-cols-3 gap-2">
               {s.photos.map((p, i) => (
                 <div key={i} className="relative group">
-                  <img src={p} alt="" className="h-24 w-full object-cover rounded-lg" onError={(e) => ((e.currentTarget as HTMLImageElement).style.opacity = '0.3')} />
+                  <img src={p} alt="" className="h-24 w-full object-cover rounded-lg" />
                   <button onClick={() => removePhoto(i)} className="absolute top-1 right-1 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-white text-xs">✕</button>
                 </div>
               ))}

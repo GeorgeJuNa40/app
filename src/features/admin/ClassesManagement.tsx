@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../../lib/store';
 import { PageHeader, Card, Button } from '../../components/ui';
 import ClassThumb from '../../components/ClassThumb';
+import ImageUpload from '../../components/ImageUpload';
 import type { ClassTemplate } from '../../lib/types';
 
 const emptyDraft = (studioId: string): ClassTemplate => ({
@@ -72,8 +73,13 @@ export default function ClassesManagement() {
                   <input type="color" className="h-11 w-full rounded-xl border border-cream-dark" value={draft.colorHex} onChange={(e) => setDraft({ ...draft, colorHex: e.target.value })} />
                 </Field>
               </div>
-              <Field label="Foto (URL de imagen)">
-                <input className="input" placeholder="https://…" value={draft.photoUrl} onChange={(e) => setDraft({ ...draft, photoUrl: e.target.value })} />
+              <Field label="Foto de la clase">
+                <div className="flex items-center gap-3">
+                  <ImageUpload label="Subir foto" onSelect={(url) => setDraft({ ...draft, photoUrl: url })} />
+                  {draft.photoUrl && (
+                    <button type="button" onClick={() => setDraft({ ...draft, photoUrl: '' })} className="text-sm text-red-600">Quitar</button>
+                  )}
+                </div>
               </Field>
               <div>
                 <span className="mb-1 block text-sm font-medium text-ink-soft">Vista previa</span>
