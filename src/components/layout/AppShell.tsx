@@ -13,13 +13,17 @@ interface NavItem {
 const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   STUDIO_ADMIN: [
     { to: '/admin', label: 'Dashboard', icon: '◱' },
+    { to: '/admin/members', label: 'Miembros (CRM)', icon: '⚇' },
     { to: '/admin/calendar', label: 'Calendario', icon: '▦' },
+    { to: '/admin/classes', label: 'Clases', icon: '◉' },
     { to: '/admin/packages', label: 'Paquetes', icon: '❏' },
-    { to: '/admin/coaches', label: 'Coaches', icon: '⚇' },
+    { to: '/admin/coaches', label: 'Coaches', icon: '⚐' },
+    { to: '/admin/rewards', label: 'Recompensas', icon: '★' },
     { to: '/admin/services', label: 'Servicios', icon: '✚' },
-    { to: '/admin/branding', label: 'Branding', icon: '❀' },
+    { to: '/admin/whatsapp', label: 'WhatsApp IA', icon: '✆' },
     { to: '/admin/reports', label: 'Reportes', icon: '▤' },
     { to: '/admin/subscription', label: 'Suscripción', icon: '✦' },
+    { to: '/admin/settings', label: 'Configuración', icon: '⚙' },
   ],
   COACH: [
     { to: '/coach', label: 'Dashboard', icon: '◱' },

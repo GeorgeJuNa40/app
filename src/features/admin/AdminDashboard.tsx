@@ -10,10 +10,7 @@ export default function AdminDashboard() {
   const stats = useMemo(() => {
     const students = db.users.filter((u) => u.role === 'STUDENT').length;
     const activeBookings = db.bookings.filter((b) => b.status !== 'CANCELED').length;
-    const revenue = db.userPackages.reduce((acc, up) => {
-      const pkg = db.packages.find((p) => p.id === up.packageId);
-      return acc + (pkg?.priceUsd ?? 0);
-    }, 0);
+    const revenue = db.payments.reduce((acc, p) => acc + p.amountUsd, 0);
     const upcoming = db.classSessions
       .filter((s) => new Date(s.startsAt).getTime() > Date.now())
       .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
@@ -90,11 +87,11 @@ export default function AdminDashboard() {
         <Card className="p-5">
           <h2 className="font-semibold text-ink mb-4">Accesos rápidos</h2>
           <div className="space-y-2">
+            <QuickLink to="/admin/members" label="Miembros (CRM)" icon="⚇" />
             <QuickLink to="/admin/packages" label="Gestionar paquetes" icon="❏" />
-            <QuickLink to="/admin/coaches" label="Ver coaches" icon="⚇" />
-            <QuickLink to="/admin/services" label="Servicios opcionales" icon="✚" />
-            <QuickLink to="/admin/branding" label="Personalizar branding" icon="❀" />
-            <QuickLink to="/admin/reports" label="Reportes" icon="▤" />
+            <QuickLink to="/admin/whatsapp" label="WhatsApp IA" icon="✆" />
+            <QuickLink to="/admin/rewards" label="Recompensas" icon="★" />
+            <QuickLink to="/admin/settings" label="Configuración" icon="⚙" />
           </div>
         </Card>
       </div>
