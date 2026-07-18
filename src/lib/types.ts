@@ -6,21 +6,42 @@ export type SubscriptionStatus = 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING'
 
 export type BookingStatus = 'RESERVED' | 'ATTENDED' | 'CANCELED' | 'NO_SHOW';
 
-export type OptionalServiceType = 'NUTRITION' | 'KINESIOLOGY' | 'SPORTS_MEDICINE';
+export type CoachStatus = 'APPROVED' | 'PENDING' | 'DENIED';
+
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'paypal';
+
+export type MembershipState = 'active' | 'expiring' | 'expired' | 'none';
 
 export interface Branding {
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
   fontFamily: string;
-  logoText: string; // en el MVP el "logo" es texto; en prod sería logoUrl
+  logoText: string;
   heroPhotoUrl?: string;
 }
 
-export interface ServiceConfig {
-  nutritionEnabled: boolean;
-  kinesiologyEnabled: boolean;
-  sportsMedicineEnabled: boolean;
+// Servicio opcional editable por el estudio (Nutrición, Kinesiología, etc.).
+export interface OptionalService {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  custom: boolean; // los custom se pueden eliminar
+}
+
+// Plantilla de mensaje del bot de WhatsApp, editable por el estudio.
+export interface WhatsappTemplate {
+  id: string;
+  label: string;
+  text: string;
+}
+
+export interface WhatsappConfig {
+  number: string; // número del estudio (formato internacional, sin +)
+  botEnabled: boolean;
+  templates: WhatsappTemplate[];
+  knowledge: string[]; // retro/base de conocimiento para que el bot responda
 }
 
 export interface Subscription {
@@ -33,8 +54,13 @@ export interface Studio {
   id: string;
   name: string;
   ceuCode: string;
+  phone: string;
+  email: string;
+  address: string;
+  photos: string[]; // galería (URLs)
   branding: Branding;
-  serviceConfig: ServiceConfig;
+  services: OptionalService[];
+  whatsapp: WhatsappConfig;
   subscription: Subscription;
 }
 
@@ -50,8 +76,11 @@ export interface User {
   role: Role;
   fullName: string;
   email: string;
+  phone: string;
   avatarInitials: string;
+  createdAt: string;
   coachProfile?: CoachProfile;
+  coachStatus?: CoachStatus; // solo coaches
 }
 
 export interface Package {
@@ -83,6 +112,7 @@ export interface ClassTemplate {
   name: string;
   durationMin: number;
   colorHex: string;
+  photoUrl?: string; // foto que define el tipo de clase
 }
 
 export interface ClassSession {
@@ -102,6 +132,17 @@ export interface Booking {
   userPackageId: string | null;
   status: BookingStatus;
   createdAt: string;
+}
+
+export interface Payment {
+  id: string;
+  userId: string;
+  amountUsd: number;
+  method: PaymentMethod;
+  packageId?: string;
+  concept: string;
+  paidAt: string;
+  registeredBy: 'studio' | 'online'; // manual (estudio) u online (pasarela)
 }
 
 export interface StarEntry {
@@ -139,6 +180,7 @@ export interface Database {
   classTemplates: ClassTemplate[];
   classSessions: ClassSession[];
   bookings: Booking[];
+  payments: Payment[];
   stars: StarEntry[];
   rewards: Reward[];
   goals: Goal[];
