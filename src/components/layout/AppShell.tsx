@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useStore } from '../../lib/store';
 import type { Role } from '../../lib/types';
+import Avatar from '../Avatar';
+import ImageUpload from '../ImageUpload';
 
 interface NavItem {
   to: string;
@@ -36,7 +38,6 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { to: '/app/packages', label: 'Mis Paquetes', icon: '❏' },
     { to: '/app/rewards', label: 'Recompensas', icon: '★' },
     { to: '/app/services', label: 'Servicios', icon: '✚' },
-    { to: '/app/goals', label: 'Mis Metas', icon: '◎' },
   ],
 };
 
@@ -47,7 +48,7 @@ const ROLE_LABEL: Record<Role, string> = {
 };
 
 export default function AppShell({ children }: { children: ReactNode }) {
-  const { currentUser, currentStudio, logout } = useStore();
+  const { currentUser, currentStudio, logout, updateUserAvatar } = useStore();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -91,14 +92,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
       <div className="border-t border-cream-dark p-4">
         <div className="flex items-center gap-3 mb-3">
-          <div className="grid h-9 w-9 place-items-center rounded-full bg-brand text-cream text-sm font-bold">
-            {currentUser.avatarInitials}
-          </div>
+          <Avatar url={currentUser.avatarUrl} initials={currentUser.avatarInitials} className="h-9 w-9 text-sm" />
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-ink">{currentUser.fullName}</p>
             <p className="text-xs text-ink-faint">{ROLE_LABEL[currentUser.role]}</p>
           </div>
         </div>
+        <ImageUpload
+          label="Cambiar foto"
+          className="w-full mb-2"
+          onSelect={(url) => updateUserAvatar(currentUser.id, url)}
+        />
         <button
           onClick={handleLogout}
           className="w-full rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-cream-dark text-left"
@@ -126,9 +130,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           ☰
         </button>
         <p className="font-bold text-brand">{currentStudio.branding.logoText}</p>
-        <div className="grid h-8 w-8 place-items-center rounded-full bg-brand text-cream text-xs font-bold">
-          {currentUser.avatarInitials}
-        </div>
+        <Avatar url={currentUser.avatarUrl} initials={currentUser.avatarInitials} className="h-8 w-8 text-xs" />
       </header>
 
       {/* Drawer mobile */}
