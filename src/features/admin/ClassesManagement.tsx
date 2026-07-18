@@ -1,0 +1,102 @@
+import { useState } from 'react';
+import { useStore } from '../../lib/store';
+import { PageHeader, Card, Button } from '../../components/ui';
+import ClassThumb from '../../components/ClassThumb';
+import type { ClassTemplate } from '../../lib/types';
+
+const emptyDraft = (studioId: string): ClassTemplate => ({
+  id: 'new',
+  studioId,
+  name: '',
+  durationMin: 50,
+  colorHex: '#2D5A4C',
+  photoUrl: '',
+});
+
+// Gestión de tipos de clase, con foto que define cada tipo.
+export default function ClassesManagement() {
+  const { db, currentStudio, upsertClassTemplate, deleteClassTemplate } = useStore();
+  const studioId = currentStudio!.id;
+  const templates = db.classTemplates.filter((t) => t.studioId === studioId);
+  const [draft, setDraft] = useState<ClassTemplate | null>(null);
+
+  const save = () => {
+    if (!draft || !draft.name.trim()) return;
+    upsertClassTemplate({ ...draft, photoUrl: draft.photoUrl?.trim() || undefined });
+    setDraft(null);
+  };
+
+  return (
+    <>
+      <PageHeader
+        title="Clases"
+        subtitle="Tipos de clase y su foto (aparece en calendario, reservas y paquetes)"
+        action={<Button onClick={() => setDraft(emptyDraft(studioId))}>+ Nueva clase</Button>}
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {templates.map((t) => {
+          const sessions = db.classSessions.filter((s) => s.templateId === t.id).length;
+          return (
+            <Card key={t.id} className="overflow-hidden">
+              <ClassThumb tpl={t} rounded="rounded-none" className="h-32 w-full text-3xl" />
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-ink">{t.name}</h3>
+                  <span className="h-4 w-4 rounded-full" style={{ background: t.colorHex }} />
+                </div>
+                <p className="text-sm text-ink-faint mt-0.5">{t.durationMin} min · {sessions} sesiones</p>
+                <div className="mt-3 flex gap-2">
+                  <Button variant="secondary" className="flex-1" onClick={() => setDraft({ ...t, photoUrl: t.photoUrl ?? '' })}>Editar</Button>
+                  <Button variant="danger" onClick={() => { if (confirm(`¿Eliminar "${t.name}"? Se quitarán sus sesiones.`)) deleteClassTemplate(t.id); }}>Eliminar</Button>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {draft && (
+        <div className="fixed inset-0 z-40 grid place-items-center bg-black/40 p-4">
+          <Card className="w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-ink mb-4">{draft.id === 'new' ? 'Nueva clase' : 'Editar clase'}</h2>
+            <div className="space-y-4">
+              <Field label="Nombre">
+                <input className="input" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Duración (min)">
+                  <input type="number" className="input" value={draft.durationMin} onChange={(e) => setDraft({ ...draft, durationMin: +e.target.value })} />
+                </Field>
+                <Field label="Color">
+                  <input type="color" className="h-11 w-full rounded-xl border border-cream-dark" value={draft.colorHex} onChange={(e) => setDraft({ ...draft, colorHex: e.target.value })} />
+                </Field>
+              </div>
+              <Field label="Foto (URL de imagen)">
+                <input className="input" placeholder="https://…" value={draft.photoUrl} onChange={(e) => setDraft({ ...draft, photoUrl: e.target.value })} />
+              </Field>
+              <div>
+                <span className="mb-1 block text-sm font-medium text-ink-soft">Vista previa</span>
+                <ClassThumb tpl={{ ...draft, photoUrl: draft.photoUrl?.trim() || undefined }} className="h-28 w-full text-3xl" />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setDraft(null)}>Cancelar</Button>
+              <Button onClick={save}>Guardar</Button>
+            </div>
+            <style>{`.input{width:100%;border:1px solid #E8E3D6;border-radius:.75rem;padding:.6rem .8rem;background:#fff;outline:none}.input:focus{box-shadow:0 0 0 2px var(--brand-primary)}`}</style>
+          </Card>
+        </div>
+      )}
+    </>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-medium text-ink-soft">{label}</span>
+      {children}
+    </label>
+  );
+}
