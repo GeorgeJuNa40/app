@@ -1,9 +1,7 @@
-import { useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useStore } from './lib/store';
 import type { Role } from './lib/types';
 import AppShell from './components/layout/AppShell';
-import SplashScreen from './components/SplashScreen';
 
 import OnboardingScreen from './features/onboarding/OnboardingScreen';
 
@@ -46,13 +44,9 @@ function RequireRole({ role, children }: { role: Role; children: React.ReactNode
 
 export default function App() {
   const { currentUser } = useStore();
-  // El splash aparece primero al abrir la app (una vez por carga).
-  const [showSplash, setShowSplash] = useState(true);
 
   return (
-    <>
-      {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
-      <Routes>
+    <Routes>
       {/* Onboarding: pantalla de inicio con CEU. Si ya hay sesión, redirige. */}
       <Route
         path="/"
@@ -99,7 +93,6 @@ export default function App() {
       <Route path="/app/goals" element={<RequireRole role="STUDENT"><Goals /></RequireRole>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </>
+    </Routes>
   );
 }

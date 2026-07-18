@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useStore } from '../../lib/store';
 import type { Role } from '../../lib/types';
-import Logo from '../Logo';
 
 interface NavItem {
   to: string;
@@ -60,10 +59,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <div className="flex h-full flex-col">
       <div className="px-5 py-6 border-b border-cream-dark">
         <p className="text-lg font-bold text-brand">{currentStudio.branding.logoText}</p>
-        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-ink-faint">
-          <span>powered by</span>
-          <Logo height={16} theme="onLight" />
-        </div>
+        <p className="text-xs text-ink-faint mt-0.5">
+          powered by <span className="font-semibold">Move yA</span>
+        </p>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
