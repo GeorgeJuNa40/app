@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../lib/store';
 import type { Role } from '../../lib/types';
+import Logo from '../../components/Logo';
 
 // Pantalla de inicio: video de marca (logo animado) + input único de CEU,
 // luego selección de rol para el login del MVP.
@@ -49,7 +50,9 @@ export default function OnboardingScreen() {
           <p className="text-sm tracking-[0.3em] uppercase opacity-80">Pilates · Bienestar</p>
         </div>
         <div className="relative text-center">
-          <div className="brand-float text-6xl font-black tracking-tight">Move yA</div>
+          <div className="brand-float flex justify-center">
+            <Logo height={92} theme="onDark" />
+          </div>
           <p className="mt-4 text-cream/80 max-w-sm mx-auto">
             La plataforma que fluye con tu estudio. Reserva, gestiona y crece.
           </p>
@@ -60,8 +63,8 @@ export default function OnboardingScreen() {
       {/* Panel de acceso */}
       <div className="flex items-center justify-center bg-cream p-6">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden mb-8 text-center">
-            <div className="brand-float text-4xl font-black text-brand">Move yA</div>
+          <div className="lg:hidden mb-8 flex justify-center">
+            <Logo height={56} theme="onLight" />
           </div>
 
           <h1 className="text-2xl font-bold text-ink">Bienvenido</h1>
