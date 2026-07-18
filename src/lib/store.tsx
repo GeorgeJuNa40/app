@@ -81,6 +81,8 @@ interface StoreValue {
   // Estudio — coaches
   setCoachStatus: (userId: string, status: User['coachStatus']) => void;
   upsertCoach: (coach: User) => void;
+  // Perfil — foto de cualquier usuario (admin, coach, alumno)
+  updateUserAvatar: (userId: string, avatarUrl: string) => void;
   // Estudio — servicios
   addService: (name: string, description: string) => void;
   updateService: (id: string, patch: Partial<OptionalService>) => void;
@@ -354,6 +356,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             : [...prev.users, { ...coach, id: nextId('user') }],
         };
       });
+    },
+    updateUserAvatar(userId, avatarUrl) {
+      setDb((prev) => ({
+        ...prev,
+        users: prev.users.map((u) => (u.id === userId ? { ...u, avatarUrl } : u)),
+      }));
     },
 
     addService(name, description) {
