@@ -46,8 +46,12 @@ export interface WhatsappConfig {
 
 export interface Subscription {
   status: SubscriptionStatus;
-  priceUsd: number;
-  currentPeriodEnd: string; // ISO date
+  priceUsd: number; // precio mensual estándar (34.99)
+  promoPriceUsd: number; // precio de la promo de lanzamiento (1)
+  trialDays: number; // días de prueba de la promo (14)
+  isPromo: boolean; // registrado dentro de la ventana de lanzamiento (3 meses)
+  trialEndsAt: string; // fin de la prueba
+  currentPeriodEnd: string; // acceso hasta esta fecha
 }
 
 export interface Studio {
