@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useStore } from '../../lib/store';
+import { useStore, isSubscriptionActive } from '../../lib/store';
 import { PageHeader, StatCard, Card, Badge, Button } from '../../components/ui';
 import { fmtTime, fmtDay, daysUntil } from '../../lib/format';
 
@@ -20,6 +20,9 @@ export default function AdminDashboard() {
 
   const sub = currentStudio!.subscription;
   const daysLeft = daysUntil(sub.currentPeriodEnd);
+  const subActive = isSubscriptionActive(currentStudio);
+  const inTrial = sub.status === 'TRIALING' && daysUntil(sub.trialEndsAt) > 0;
+  const subLabel = inTrial ? 'En prueba' : subActive ? 'Activa' : 'Requiere pago';
 
   return (
     <>
@@ -48,7 +51,7 @@ export default function AdminDashboard() {
         <StatCard label="Ingresos (paquetes)" value={`$${stats.revenue}`} hint="USD acumulado" icon="◈" />
         <StatCard
           label="Suscripción"
-          value={<Badge tone={sub.status === 'ACTIVE' ? 'success' : 'danger'}>{sub.status}</Badge>}
+          value={<Badge tone={subActive ? 'success' : 'danger'}>{subLabel}</Badge>}
           hint={`${daysLeft} días restantes`}
           icon="✦"
         />

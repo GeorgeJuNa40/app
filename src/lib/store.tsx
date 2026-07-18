@@ -99,6 +99,7 @@ interface StoreValue {
   addKnowledge: (text: string) => void;
   removeKnowledge: (index: number) => void;
   // Suscripción SaaS
+  activatePromo: () => void;
   markSubscriptionPaid: () => void;
   setSubscriptionPastDue: () => void;
 }
@@ -437,6 +438,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }));
     },
 
+    // Promo de lanzamiento: paga $1 y activa 14 días de prueba.
+    activatePromo() {
+      patchStudio((s) => {
+        const end = new Date();
+        end.setDate(end.getDate() + (s.subscription.trialDays || 14));
+        return {
+          ...s,
+          subscription: {
+            ...s.subscription,
+            status: 'TRIALING',
+            isPromo: true,
+            trialEndsAt: end.toISOString(),
+            currentPeriodEnd: end.toISOString(),
+          },
+        };
+      });
+    },
     markSubscriptionPaid() {
       const end = new Date();
       end.setDate(end.getDate() + 30);
