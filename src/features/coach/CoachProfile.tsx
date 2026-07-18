@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useStore } from '../../lib/store';
 import { PageHeader, Card, Button, Badge } from '../../components/ui';
+import Avatar from '../../components/Avatar';
+import ImageUpload from '../../components/ImageUpload';
 
-// Coach: acceso a su perfil (bio). Edición local en el MVP.
+// Coach: acceso a su perfil (bio y foto). Edición local en el MVP.
 export default function CoachProfile() {
-  const { currentUser } = useStore();
+  const { currentUser, updateUserAvatar } = useStore();
   const [bio, setBio] = useState(currentUser!.coachProfile?.bio ?? '');
   const [saved, setSaved] = useState(false);
 
@@ -13,8 +15,9 @@ export default function CoachProfile() {
       <PageHeader title="Mi Perfil" subtitle="Así te ven tus alumnos" />
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="p-6 text-center">
-          <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-brand text-cream text-2xl font-bold">
-            {currentUser!.avatarInitials}
+          <Avatar url={currentUser!.avatarUrl} initials={currentUser!.avatarInitials} className="mx-auto h-20 w-20 text-2xl" />
+          <div className="mt-3 flex justify-center">
+            <ImageUpload label="Subir foto" onSelect={(url) => updateUserAvatar(currentUser!.id, url)} />
           </div>
           <h2 className="mt-3 font-semibold text-ink">{currentUser!.fullName}</h2>
           <p className="text-sm text-ink-faint">{currentUser!.email}</p>

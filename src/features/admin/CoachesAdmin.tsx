@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useStore } from '../../lib/store';
 import { PageHeader, Card, Badge, Button } from '../../components/ui';
+import Avatar from '../../components/Avatar';
+import ImageUpload from '../../components/ImageUpload';
 import type { CoachStatus, User } from '../../lib/types';
 
 const STATUS_META: Record<CoachStatus, { label: string; tone: 'success' | 'warning' | 'danger' }> = {
@@ -14,7 +16,7 @@ const initials = (name: string) =>
 
 type Draft = {
   id: string; fullName: string; email: string; phone: string;
-  bio: string; specialties: string; yearsExp: number;
+  bio: string; specialties: string; yearsExp: number; avatarUrl?: string;
 };
 
 export default function CoachesAdmin() {
@@ -27,7 +29,7 @@ export default function CoachesAdmin() {
   const editDraft = (c: User) => setDraft({
     id: c.id, fullName: c.fullName, email: c.email, phone: c.phone,
     bio: c.coachProfile?.bio ?? '', specialties: (c.coachProfile?.specialties ?? []).join(', '),
-    yearsExp: c.coachProfile?.yearsExp ?? 1,
+    yearsExp: c.coachProfile?.yearsExp ?? 1, avatarUrl: c.avatarUrl,
   });
 
   const save = () => {
@@ -41,6 +43,7 @@ export default function CoachesAdmin() {
       email: draft.email,
       phone: draft.phone,
       avatarInitials: initials(draft.fullName),
+      avatarUrl: draft.avatarUrl,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
       coachStatus: existing?.coachStatus ?? 'APPROVED',
       coachProfile: {
@@ -68,7 +71,7 @@ export default function CoachesAdmin() {
             <Card key={c.id} className="p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="grid h-12 w-12 place-items-center rounded-full bg-brand text-cream font-bold">{c.avatarInitials}</span>
+                  <Avatar url={c.avatarUrl} initials={c.avatarInitials} className="h-12 w-12 text-base" />
                   <div>
                     <h3 className="font-semibold text-ink">{c.fullName}</h3>
                     <p className="text-xs text-ink-faint">{c.phone} · {c.email}</p>
@@ -95,6 +98,11 @@ export default function CoachesAdmin() {
           <Card className="w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold text-ink mb-4">{draft.id === 'new' ? 'Nuevo coach' : 'Editar coach'}</h2>
             <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Avatar url={draft.avatarUrl} initials={initials(draft.fullName || '?')} className="h-14 w-14 text-lg" />
+                <ImageUpload label="Subir foto" onSelect={(url) => setDraft({ ...draft, avatarUrl: url })} />
+                {draft.avatarUrl && <button type="button" onClick={() => setDraft({ ...draft, avatarUrl: undefined })} className="text-sm text-red-600">Quitar</button>}
+              </div>
               <Field label="Nombre completo"><input className="input" value={draft.fullName} onChange={(e) => setDraft({ ...draft, fullName: e.target.value })} /></Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Teléfono"><input className="input" value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} /></Field>
