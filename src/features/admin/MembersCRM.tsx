@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../../lib/store';
 import { PageHeader, Card, Badge, Button, StatCard } from '../../components/ui';
+import Avatar from '../../components/Avatar';
 import { fmtDay, fmtTime, usd } from '../../lib/format';
 import type { MembershipState, PaymentMethod, User } from '../../lib/types';
 
@@ -100,7 +101,7 @@ export default function MembersCRM() {
                   <tr key={s.id} className="hover:bg-cream-dark/20">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <span className="grid h-8 w-8 place-items-center rounded-full bg-brand text-cream text-xs font-bold">{s.avatarInitials}</span>
+                        <Avatar url={s.avatarUrl} initials={s.avatarInitials} className="h-8 w-8 text-xs" />
                         <div>
                           <p className="font-medium text-ink">{s.fullName}</p>
                           <p className="text-xs text-ink-faint">Alta {fmtDay(s.createdAt)}</p>
@@ -166,7 +167,7 @@ export default function MembersCRM() {
             return (
               <>
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="grid h-12 w-12 place-items-center rounded-full bg-brand text-cream font-bold">{detail.avatarInitials}</span>
+                  <Avatar url={detail.avatarUrl} initials={detail.avatarInitials} className="h-12 w-12 text-base" />
                   <div>
                     <h2 className="text-lg font-bold text-ink">{detail.fullName}</h2>
                     <p className="text-sm text-ink-faint">{detail.phone} · {detail.email}</p>
