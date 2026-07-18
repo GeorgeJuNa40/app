@@ -66,7 +66,7 @@ export default function WhatsappAgent() {
         {/* Base de conocimiento / retro */}
         <Card className="p-6">
           <h2 className="font-semibold text-ink mb-1">Retroalimentación del bot</h2>
-          <p className="text-sm text-ink-faint mb-3">Enseñale respuestas para que conteste por sí solo.</p>
+          <p className="text-sm text-ink-faint mb-3">Enséñale respuestas para que conteste por sí solo.</p>
           <div className="space-y-2 max-h-44 overflow-y-auto mb-3">
             {wa.knowledge.map((k, i) => (
               <div key={i} className="flex items-start justify-between gap-2 rounded-lg bg-cream-dark/40 px-3 py-2 text-sm">

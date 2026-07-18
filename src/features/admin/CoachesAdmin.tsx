@@ -78,7 +78,7 @@ export default function CoachesAdmin() {
               </div>
               <p className="mt-3 text-sm text-ink-soft">{c.coachProfile?.bio}</p>
               <div className="mt-2 flex flex-wrap gap-1">
-                {c.coachProfile?.specialties.map((sp) => <Badge key={sp} tone="neutral">{sp}</Badge>)}
+                {c.coachProfile?.specialties.map((s) => <Badge key={s} tone="neutral">{s}</Badge>)}
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button variant="secondary" onClick={() => editDraft(c)}>Editar</Button>
