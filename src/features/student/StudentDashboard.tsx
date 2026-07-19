@@ -5,8 +5,9 @@ import { PageHeader, StatCard, Card, Badge, Button } from '../../components/ui';
 import { fmtDay, fmtTime, daysUntil } from '../../lib/format';
 
 export default function StudentDashboard() {
-  const { db, currentUser, starBalance } = useStore();
+  const { db, currentUser, currentStudio, starBalance } = useStore();
   const uid = currentUser!.id;
+  const photos = currentStudio!.photos;
 
   const data = useMemo(() => {
     const myBookings = db.bookings
@@ -44,6 +45,17 @@ export default function StudentDashboard() {
         />
         <StatCard label="Próximas reservas" value={data.myBookings.length} icon="▦" />
       </div>
+
+      {photos.length > 0 && (
+        <div className="mb-8">
+          <h2 className="mb-3 font-semibold text-ink">Conoce {currentStudio!.branding.logoText}</h2>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {photos.map((p, i) => (
+              <img key={i} src={p} alt="" className="h-32 w-48 shrink-0 rounded-2xl object-cover border border-cream-dark" />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2 p-5">

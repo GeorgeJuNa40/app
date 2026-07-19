@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useStore } from '../lib/store';
 import { fmtFullDay, fmtTime, dayKey } from '../lib/format';
 import { Badge } from './ui';
+import ClassThumb from './ClassThumb';
+import Avatar from './Avatar';
 import type { ClassSession } from '../lib/types';
 
 interface Props {
@@ -53,28 +55,38 @@ export default function WeekCalendar({ filter, renderAction }: Props) {
               return (
                 <div
                   key={s.id}
-                  className="rounded-2xl bg-white border border-cream-dark p-4 shadow-sm"
-                  style={{ borderLeft: `4px solid ${tpl.colorHex}` }}
+                  className="overflow-hidden rounded-2xl bg-white border border-cream-dark shadow-sm"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-ink">{tpl.name}</p>
-                      <p className="text-sm text-ink-faint">
-                        {fmtTime(s.startsAt)} · {tpl.durationMin} min
-                      </p>
+                  {/* Foto del tipo de clase */}
+                  <div className="relative">
+                    <ClassThumb tpl={tpl} rounded="rounded-none" className="h-24 w-full text-2xl" />
+                    <div className="absolute right-2 top-2">
+                      {seats <= 3 ? (
+                        <Badge tone={seats === 0 ? 'danger' : 'warning'}>
+                          {seats === 0 ? 'Lleno' : `Quedan ${seats}`}
+                        </Badge>
+                      ) : (
+                        <Badge tone="success">{seats} lugares</Badge>
+                      )}
                     </div>
-                    {seats <= 3 ? (
-                      <Badge tone={seats === 0 ? 'danger' : 'warning'}>
-                        {seats === 0 ? 'Lleno' : `Quedan ${seats}`}
-                      </Badge>
-                    ) : (
-                      <Badge tone="success">{seats} lugares</Badge>
-                    )}
                   </div>
-                  <p className="mt-2 text-sm text-ink-soft">
-                    {coach ? `con ${coach.fullName}` : 'Sin coach asignado'}
-                  </p>
-                  {renderAction && <div className="mt-3">{renderAction(s, seats)}</div>}
+                  <div className="p-4" style={{ borderLeft: `4px solid ${tpl.colorHex}` }}>
+                    <p className="font-semibold text-ink">{tpl.name}</p>
+                    <p className="text-sm text-ink-faint">
+                      {fmtTime(s.startsAt)} · {tpl.durationMin} min
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      {coach ? (
+                        <>
+                          <Avatar url={coach.avatarUrl} initials={coach.avatarInitials} className="h-6 w-6 text-[10px]" />
+                          <span className="text-sm text-ink-soft">con {coach.fullName}</span>
+                        </>
+                      ) : (
+                        <span className="text-sm text-ink-soft">Sin coach asignado</span>
+                      )}
+                    </div>
+                    {renderAction && <div className="mt-3">{renderAction(s, seats)}</div>}
+                  </div>
                 </div>
               );
             })}

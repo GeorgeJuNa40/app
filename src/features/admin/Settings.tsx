@@ -1,6 +1,7 @@
 import { useStore } from '../../lib/store';
 import { PageHeader, Card } from '../../components/ui';
 import ImageUpload from '../../components/ImageUpload';
+import StudioLogo from '../../components/StudioLogo';
 
 // Configuración: datos del negocio, fotos y White-label (branding).
 export default function Settings() {
@@ -23,9 +24,22 @@ export default function Settings() {
           <Field label="Nombre del negocio">
             <input className="input" value={s.name} onChange={(e) => updateStudio({ name: e.target.value })} />
           </Field>
-          <Field label="Nombre visible / Logo (texto)">
+          <Field label="Nombre visible (texto, si no subes logo)">
             <input className="input" value={b.logoText} onChange={(e) => updateBranding({ logoText: e.target.value })} />
           </Field>
+          <div>
+            <span className="mb-1 block text-sm font-medium text-ink-soft">Logo del estudio (imagen)</span>
+            <div className="flex items-center gap-3">
+              <div className="grid h-12 min-w-[3rem] place-items-center rounded-lg bg-cream-dark/40 px-2">
+                <StudioLogo branding={b} imgClass="h-10 max-w-[120px]" textClass="text-sm font-bold text-brand" />
+              </div>
+              <ImageUpload label="Subir logo" onSelect={(url) => updateBranding({ logoUrl: url })} />
+              {b.logoUrl && (
+                <button type="button" onClick={() => updateBranding({ logoUrl: undefined })} className="text-sm text-red-600">Quitar</button>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-ink-faint">Se muestra en la barra lateral y el encabezado, visible para admin, coaches y alumnos.</p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Teléfono"><input className="input" value={s.phone} onChange={(e) => updateStudio({ phone: e.target.value })} /></Field>
             <Field label="Correo"><input className="input" value={s.email} onChange={(e) => updateStudio({ email: e.target.value })} /></Field>

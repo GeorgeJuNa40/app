@@ -18,6 +18,7 @@ export interface Branding {
   accentColor: string;
   fontFamily: string;
   logoText: string;
+  logoUrl?: string; // logo del estudio (imagen subida), visible para todos
   heroPhotoUrl?: string;
 }
 

@@ -4,6 +4,7 @@ import { useStore } from '../../lib/store';
 import type { Role } from '../../lib/types';
 import Avatar from '../Avatar';
 import ImageUpload from '../ImageUpload';
+import StudioLogo from '../StudioLogo';
 
 interface NavItem {
   to: string;
@@ -63,8 +64,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const SidebarContent = (
     <div className="flex h-full flex-col">
       <div className="px-5 py-6 border-b border-cream-dark">
-        <p className="text-lg font-bold text-brand">{currentStudio.branding.logoText}</p>
-        <p className="text-xs text-ink-faint mt-0.5">
+        <StudioLogo branding={currentStudio.branding} imgClass="h-10 max-w-[180px]" />
+        <p className="text-xs text-ink-faint mt-1.5">
           powered by <span className="font-semibold">Move yA</span>
         </p>
       </div>
@@ -129,7 +130,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         >
           ☰
         </button>
-        <p className="font-bold text-brand">{currentStudio.branding.logoText}</p>
+        <StudioLogo branding={currentStudio.branding} imgClass="h-8 max-w-[130px]" textClass="font-bold text-brand" />
         <Avatar url={currentUser.avatarUrl} initials={currentUser.avatarInitials} className="h-8 w-8 text-xs" />
       </header>
 
