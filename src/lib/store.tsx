@@ -25,7 +25,7 @@ import type {
 } from './types';
 import { seedDatabase } from './mockData';
 
-const STORAGE_KEY = 'moveya_db_v2';
+const STORAGE_KEY = 'moveya_db_v3';
 const SESSION_KEY = 'moveya_session_v1';
 
 function loadDb(): Database {
