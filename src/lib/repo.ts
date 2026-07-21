@@ -222,3 +222,135 @@ export async function loadDatabase(): Promise<Database> {
     goals: (goals.data ?? []).map(mapGoal),
   };
 }
+
+// ---------------------------------------------------------------------------
+// ESCRITURA: guarda cambios en Supabase (camelCase del front -> snake_case).
+// Si algo falla, se registra en la consola sin tumbar la app.
+// ---------------------------------------------------------------------------
+
+export async function dbInsert(table: string, row: Row) {
+  const { error } = await supabase.from(table).insert(row);
+  if (error) console.error(`insert ${table}:`, error.message);
+}
+export async function dbUpsert(table: string, row: Row) {
+  const { error } = await supabase.from(table).upsert(row);
+  if (error) console.error(`upsert ${table}:`, error.message);
+}
+export async function dbUpdate(table: string, id: string, patch: Row) {
+  const { error } = await supabase.from(table).update(patch).eq('id', id);
+  if (error) console.error(`update ${table}:`, error.message);
+}
+export async function dbDelete(table: string, id: string) {
+  const { error } = await supabase.from(table).delete().eq('id', id);
+  if (error) console.error(`delete ${table}:`, error.message);
+}
+export async function dbDeleteWhere(table: string, col: string, val: string) {
+  const { error } = await supabase.from(table).delete().eq(col, val);
+  if (error) console.error(`delete ${table} where ${col}:`, error.message);
+}
+
+// Guarda el estudio completo (branding, servicios, whatsapp, suscripción, datos).
+export async function persistStudio(s: Studio) {
+  const { error } = await supabase
+    .from('studios')
+    .update({
+      name: s.name,
+      phone: s.phone,
+      email: s.email,
+      address: s.address,
+      photos: s.photos,
+      branding: s.branding,
+      services: s.services,
+      whatsapp: s.whatsapp,
+      subscription: s.subscription,
+    })
+    .eq('id', s.id);
+  if (error) console.error('persistStudio:', error.message);
+}
+
+// Traductores camelCase -> fila de la base (snake_case).
+export const rowPackage = (p: Package): Row => ({
+  id: p.id,
+  studio_id: p.studioId,
+  name: p.name,
+  description: p.description,
+  price_usd: p.priceUsd,
+  class_credits: p.classCredits,
+  validity_days: p.validityDays,
+  active: p.active,
+  eligible_class_ids: p.eligibleClassIds,
+});
+export const rowUserPackage = (up: UserPackage): Row => ({
+  id: up.id,
+  user_id: up.userId,
+  package_id: up.packageId,
+  credits_total: up.creditsTotal,
+  credits_used: up.creditsUsed,
+  purchased_at: up.purchasedAt,
+  expires_at: up.expiresAt,
+  active: up.active,
+});
+export const rowClassTemplate = (t: ClassTemplate): Row => ({
+  id: t.id,
+  studio_id: t.studioId,
+  name: t.name,
+  duration_min: t.durationMin,
+  color_hex: t.colorHex,
+  photo_url: t.photoUrl ?? null,
+});
+export const rowClassSession = (s: ClassSession): Row => ({
+  id: s.id,
+  studio_id: s.studioId,
+  template_id: s.templateId,
+  coach_id: s.coachId,
+  starts_at: s.startsAt,
+  ends_at: s.endsAt,
+  capacity: s.capacity,
+});
+export const rowBooking = (b: Booking): Row => ({
+  id: b.id,
+  user_id: b.userId,
+  session_id: b.sessionId,
+  user_package_id: b.userPackageId,
+  status: b.status,
+  created_at: b.createdAt,
+});
+export const rowPayment = (p: Payment): Row => ({
+  id: p.id,
+  user_id: p.userId,
+  amount_usd: p.amountUsd,
+  method: p.method,
+  package_id: p.packageId ?? null,
+  concept: p.concept,
+  paid_at: p.paidAt,
+  registered_by: p.registeredBy,
+});
+export const rowStar = (s: StarEntry): Row => ({
+  id: s.id,
+  user_id: s.userId,
+  delta: s.delta,
+  reason: s.reason,
+  created_at: s.createdAt,
+});
+export const rowReward = (r: Reward): Row => ({
+  id: r.id,
+  studio_id: r.studioId,
+  name: r.name,
+  description: r.description,
+  star_cost: r.starCost,
+  active: r.active,
+});
+export const rowUser = (u: User): Row => ({
+  id: u.id,
+  studio_id: u.studioId,
+  role: u.role,
+  full_name: u.fullName,
+  email: u.email,
+  phone: u.phone,
+  avatar_initials: u.avatarInitials,
+  avatar_url: u.avatarUrl ?? null,
+  coach_bio: u.coachProfile?.bio ?? null,
+  coach_specialties: u.coachProfile?.specialties ?? [],
+  coach_years_exp: u.coachProfile?.yearsExp ?? null,
+  coach_status: u.coachStatus ?? null,
+});

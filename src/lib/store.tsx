@@ -25,7 +25,25 @@ import type {
 } from './types';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import { loadDatabase, emptyDatabase } from './repo';
+import {
+  loadDatabase,
+  emptyDatabase,
+  persistStudio,
+  dbInsert,
+  dbUpsert,
+  dbUpdate,
+  dbDelete,
+  dbDeleteWhere,
+  rowBooking,
+  rowUserPackage,
+  rowPayment,
+  rowStar,
+  rowPackage,
+  rowClassTemplate,
+  rowClassSession,
+  rowReward,
+  rowUser,
+} from './repo';
 
 // Datos que se envían al registrarse.
 export interface SignUpInput {
@@ -105,8 +123,8 @@ interface StoreValue {
 
 const StoreContext = createContext<StoreValue | null>(null);
 
-let idCounter = 1000;
-const nextId = (prefix: string) => `${prefix}_${idCounter++}`;
+// IDs reales (UUID) para que coincidan con la base de datos.
+const newId = () => crypto.randomUUID();
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [db, setDb] = useState<Database>(emptyDatabase);
@@ -169,12 +187,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [currentStudio]);
 
-  // Helper: modifica el estudio actual.
-  const patchStudio = (fn: (s: Studio) => Studio) =>
+  // Helper: modifica el estudio actual (local) y lo guarda en Supabase.
+  const patchStudio = (fn: (s: Studio) => Studio) => {
+    if (!currentStudio) return;
+    const next = fn(currentStudio);
     setDb((prev) => ({
       ...prev,
-      studios: prev.studios.map((s) => (s.id === currentUser?.studioId ? fn(s) : s)),
+      studios: prev.studios.map((s) => (s.id === next.id ? next : s)),
     }));
+    void persistStudio(next);
+  };
 
   const value: StoreValue = {
     db,
@@ -208,12 +230,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
 
     seatsLeft(sessionId) {
-      const session = db.classSessions.find((s) => s.id === sessionId);
-      if (!session) return 0;
+      const s = db.classSessions.find((x) => x.id === sessionId);
+      if (!s) return 0;
       const taken = db.bookings.filter(
         (b) => b.sessionId === sessionId && b.status !== 'CANCELED',
       ).length;
-      return Math.max(0, session.capacity - taken);
+      return Math.max(0, s.capacity - taken);
     },
     studioUsers(role) {
       return db.users.filter((u) => u.studioId === currentUser?.studioId && u.role === role);
@@ -239,112 +261,124 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     bookSession(sessionId) {
       if (!currentUser) return;
-      setDb((prev) => {
-        const already = prev.bookings.find(
-          (b) => b.userId === currentUser.id && b.sessionId === sessionId && b.status !== 'CANCELED',
-        );
-        if (already) return prev;
-        const session = prev.classSessions.find((s) => s.id === sessionId);
-        if (!session) return prev;
-        const seats =
-          session.capacity -
-          prev.bookings.filter((b) => b.sessionId === sessionId && b.status !== 'CANCELED').length;
-        if (seats <= 0) return prev;
-        const activePkg = prev.userPackages.find(
-          (p) => p.userId === currentUser.id && p.active && p.creditsUsed < p.creditsTotal,
-        );
-        const booking: Booking = {
-          id: nextId('bk'),
-          userId: currentUser.id,
-          sessionId,
-          userPackageId: activePkg?.id ?? null,
-          status: 'RESERVED',
-          createdAt: new Date().toISOString(),
-        };
-        return {
-          ...prev,
-          bookings: [...prev.bookings, booking],
-          userPackages: activePkg
-            ? prev.userPackages.map((p) =>
-                p.id === activePkg.id ? { ...p, creditsUsed: p.creditsUsed + 1 } : p,
-              )
-            : prev.userPackages,
-        };
-      });
+      const already = db.bookings.find(
+        (b) => b.userId === currentUser.id && b.sessionId === sessionId && b.status !== 'CANCELED',
+      );
+      if (already) return;
+      const s = db.classSessions.find((x) => x.id === sessionId);
+      if (!s) return;
+      const seats =
+        s.capacity -
+        db.bookings.filter((b) => b.sessionId === sessionId && b.status !== 'CANCELED').length;
+      if (seats <= 0) return;
+      const activePkg = db.userPackages.find(
+        (p) => p.userId === currentUser.id && p.active && p.creditsUsed < p.creditsTotal,
+      );
+      const booking: Booking = {
+        id: newId(),
+        userId: currentUser.id,
+        sessionId,
+        userPackageId: activePkg?.id ?? null,
+        status: 'RESERVED',
+        createdAt: new Date().toISOString(),
+      };
+      setDb((prev) => ({
+        ...prev,
+        bookings: [...prev.bookings, booking],
+        userPackages: activePkg
+          ? prev.userPackages.map((p) =>
+              p.id === activePkg.id ? { ...p, creditsUsed: p.creditsUsed + 1 } : p,
+            )
+          : prev.userPackages,
+      }));
+      void dbInsert('bookings', rowBooking(booking));
+      if (activePkg) void dbUpdate('user_packages', activePkg.id, { credits_used: activePkg.creditsUsed + 1 });
     },
     cancelBooking(bookingId) {
-      setDb((prev) => {
-        const booking = prev.bookings.find((b) => b.id === bookingId);
-        if (!booking) return prev;
-        return {
-          ...prev,
-          bookings: prev.bookings.map((b) => (b.id === bookingId ? { ...b, status: 'CANCELED' } : b)),
-          userPackages: booking.userPackageId
-            ? prev.userPackages.map((p) =>
-                p.id === booking.userPackageId ? { ...p, creditsUsed: Math.max(0, p.creditsUsed - 1) } : p,
-              )
-            : prev.userPackages,
-        };
-      });
+      const booking = db.bookings.find((b) => b.id === bookingId);
+      if (!booking) return;
+      setDb((prev) => ({
+        ...prev,
+        bookings: prev.bookings.map((b) => (b.id === bookingId ? { ...b, status: 'CANCELED' } : b)),
+        userPackages: booking.userPackageId
+          ? prev.userPackages.map((p) =>
+              p.id === booking.userPackageId ? { ...p, creditsUsed: Math.max(0, p.creditsUsed - 1) } : p,
+            )
+          : prev.userPackages,
+      }));
+      void dbUpdate('bookings', bookingId, { status: 'CANCELED' });
+      if (booking.userPackageId) {
+        const up = db.userPackages.find((p) => p.id === booking.userPackageId);
+        if (up) void dbUpdate('user_packages', up.id, { credits_used: Math.max(0, up.creditsUsed - 1) });
+      }
     },
 
     buyPackageOnline(packageId, method) {
       if (!currentUser) return;
-      applyPurchase(setDb, currentUser.id, packageId, method, 'online');
+      applyPurchase(setDb, db, currentUser.id, packageId, method, 'online');
     },
     registerManualPlan(userId, packageId, method) {
-      applyPurchase(setDb, userId, packageId, method, 'studio');
+      applyPurchase(setDb, db, userId, packageId, method, 'studio');
     },
 
     redeemReward(rewardId) {
       if (!currentUser) return;
-      setDb((prev) => {
-        const reward = prev.rewards.find((r) => r.id === rewardId);
-        if (!reward) return prev;
-        const balance = prev.stars
-          .filter((s) => s.userId === currentUser.id)
-          .reduce((a, s) => a + s.delta, 0);
-        if (balance < reward.starCost) return prev;
-        return {
-          ...prev,
-          stars: [
-            ...prev.stars,
-            { id: nextId('st'), userId: currentUser.id, delta: -reward.starCost, reason: 'redemption', createdAt: new Date().toISOString() },
-          ],
-        };
-      });
+      const reward = db.rewards.find((r) => r.id === rewardId);
+      if (!reward) return;
+      const balance = db.stars
+        .filter((s) => s.userId === currentUser.id)
+        .reduce((a, s) => a + s.delta, 0);
+      if (balance < reward.starCost) return;
+      const entry = {
+        id: newId(),
+        userId: currentUser.id,
+        delta: -reward.starCost,
+        reason: 'redemption' as const,
+        createdAt: new Date().toISOString(),
+      };
+      setDb((prev) => ({ ...prev, stars: [...prev.stars, entry] }));
+      void dbInsert('star_entries', rowStar(entry));
     },
 
     upsertPackage(pkg) {
-      setDb((prev) => {
-        const exists = prev.packages.some((p) => p.id === pkg.id);
-        return {
-          ...prev,
-          packages: exists
-            ? prev.packages.map((p) => (p.id === pkg.id ? pkg : p))
-            : [...prev.packages, { ...pkg, id: nextId('pkg') }],
-        };
-      });
-    },
-    togglePackageActive(packageId) {
+      const studioId = currentUser?.studioId;
+      if (!studioId) return;
+      const exists = db.packages.some((p) => p.id === pkg.id);
+      const row: Package = exists ? pkg : { ...pkg, id: newId(), studioId };
       setDb((prev) => ({
         ...prev,
-        packages: prev.packages.map((p) => (p.id === packageId ? { ...p, active: !p.active } : p)),
+        packages: exists
+          ? prev.packages.map((p) => (p.id === row.id ? row : p))
+          : [...prev.packages, row],
       }));
+      void dbUpsert('packages', rowPackage(row));
+    },
+    togglePackageActive(packageId) {
+      const p = db.packages.find((x) => x.id === packageId);
+      if (!p) return;
+      const active = !p.active;
+      setDb((prev) => ({
+        ...prev,
+        packages: prev.packages.map((x) => (x.id === packageId ? { ...x, active } : x)),
+      }));
+      void dbUpdate('packages', packageId, { active });
     },
 
     upsertClassTemplate(tpl) {
-      setDb((prev) => {
-        const exists = prev.classTemplates.some((t) => t.id === tpl.id);
-        return {
-          ...prev,
-          classTemplates: exists
-            ? prev.classTemplates.map((t) => (t.id === tpl.id ? tpl : t))
-            : [...prev.classTemplates, { ...tpl, id: nextId('ct') }],
-        };
-      });
+      const studioId = currentUser?.studioId;
+      if (!studioId) return;
+      const exists = db.classTemplates.some((t) => t.id === tpl.id);
+      const row: ClassTemplate = exists ? tpl : { ...tpl, id: newId(), studioId };
+      setDb((prev) => ({
+        ...prev,
+        classTemplates: exists
+          ? prev.classTemplates.map((t) => (t.id === row.id ? row : t))
+          : [...prev.classTemplates, row],
+      }));
+      void dbUpsert('class_templates', rowClassTemplate(row));
     },
     deleteClassTemplate(id) {
+      const affected = db.packages.filter((p) => p.eligibleClassIds.includes(id));
       setDb((prev) => ({
         ...prev,
         classTemplates: prev.classTemplates.filter((t) => t.id !== id),
@@ -354,17 +388,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           eligibleClassIds: p.eligibleClassIds.filter((c) => c !== id),
         })),
       }));
+      // Orden importante: primero las sesiones (por la relación), luego el tipo.
+      void (async () => {
+        await dbDeleteWhere('class_sessions', 'template_id', id);
+        for (const p of affected) {
+          await dbUpdate('packages', p.id, {
+            eligible_class_ids: p.eligibleClassIds.filter((c) => c !== id),
+          });
+        }
+        await dbDelete('class_templates', id);
+      })();
     },
     upsertSession(s) {
-      setDb((prev) => {
-        const exists = prev.classSessions.some((x) => x.id === s.id);
-        return {
-          ...prev,
-          classSessions: exists
-            ? prev.classSessions.map((x) => (x.id === s.id ? s : x))
-            : [...prev.classSessions, { ...s, id: nextId('cs') }],
-        };
-      });
+      const studioId = currentUser?.studioId;
+      if (!studioId) return;
+      const exists = db.classSessions.some((x) => x.id === s.id);
+      const row: ClassSession = exists ? s : { ...s, id: newId(), studioId };
+      setDb((prev) => ({
+        ...prev,
+        classSessions: exists
+          ? prev.classSessions.map((x) => (x.id === row.id ? row : x))
+          : [...prev.classSessions, row],
+      }));
+      void dbUpsert('class_sessions', rowClassSession(row));
     },
     deleteSession(id) {
       setDb((prev) => ({
@@ -372,6 +418,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         classSessions: prev.classSessions.filter((s) => s.id !== id),
         bookings: prev.bookings.filter((b) => b.sessionId !== id),
       }));
+      void dbDelete('class_sessions', id); // las reservas se borran en cascada
     },
 
     setCoachStatus(userId, status) {
@@ -379,23 +426,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...prev,
         users: prev.users.map((u) => (u.id === userId ? { ...u, coachStatus: status } : u)),
       }));
+      void dbUpdate('users', userId, { coach_status: status ?? null });
     },
     upsertCoach(coach) {
-      setDb((prev) => {
-        const exists = prev.users.some((u) => u.id === coach.id);
-        return {
-          ...prev,
-          users: exists
-            ? prev.users.map((u) => (u.id === coach.id ? coach : u))
-            : [...prev.users, { ...coach, id: nextId('user') }],
-        };
-      });
+      const studioId = currentUser?.studioId;
+      if (!studioId) return;
+      const exists = db.users.some((u) => u.id === coach.id);
+      const row: User = exists ? coach : { ...coach, id: newId(), studioId };
+      setDb((prev) => ({
+        ...prev,
+        users: exists ? prev.users.map((u) => (u.id === row.id ? row : u)) : [...prev.users, row],
+      }));
+      void dbUpsert('users', rowUser(row));
     },
     updateUserAvatar(userId, avatarUrl) {
       setDb((prev) => ({
         ...prev,
         users: prev.users.map((u) => (u.id === userId ? { ...u, avatarUrl } : u)),
       }));
+      void dbUpdate('users', userId, { avatar_url: avatarUrl });
     },
 
     addService(name, description) {
@@ -403,7 +452,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...s,
         services: [
           ...s.services,
-          { id: nextId('sv'), name, description, enabled: true, custom: true },
+          { id: newId(), name, description, enabled: true, custom: true },
         ],
       }));
     },
@@ -418,18 +467,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
 
     upsertReward(reward) {
-      setDb((prev) => {
-        const exists = prev.rewards.some((r) => r.id === reward.id);
-        return {
-          ...prev,
-          rewards: exists
-            ? prev.rewards.map((r) => (r.id === reward.id ? reward : r))
-            : [...prev.rewards, { ...reward, id: nextId('rw') }],
-        };
-      });
+      const studioId = currentUser?.studioId;
+      if (!studioId) return;
+      const exists = db.rewards.some((r) => r.id === reward.id);
+      const row: Reward = exists ? reward : { ...reward, id: newId(), studioId };
+      setDb((prev) => ({
+        ...prev,
+        rewards: exists ? prev.rewards.map((r) => (r.id === row.id ? row : r)) : [...prev.rewards, row],
+      }));
+      void dbUpsert('rewards', rowReward(row));
     },
     deleteReward(id) {
       setDb((prev) => ({ ...prev, rewards: prev.rewards.filter((r) => r.id !== id) }));
+      void dbDelete('rewards', id);
     },
 
     updateStudio(patch) {
@@ -450,7 +500,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             ...s.whatsapp,
             templates: exists
               ? s.whatsapp.templates.map((x) => (x.id === t.id ? t : x))
-              : [...s.whatsapp.templates, { ...t, id: nextId('wt') }],
+              : [...s.whatsapp.templates, { ...t, id: newId() }],
           },
         };
       });
@@ -489,12 +539,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       });
     },
     markSubscriptionPaid() {
-      const end = new Date();
-      end.setDate(end.getDate() + 30);
-      patchStudio((s) => ({
-        ...s,
-        subscription: { ...s.subscription, status: 'ACTIVE', currentPeriodEnd: end.toISOString() },
-      }));
+      patchStudio((s) => {
+        const end = new Date();
+        end.setDate(end.getDate() + 30);
+        return {
+          ...s,
+          subscription: { ...s.subscription, status: 'ACTIVE', currentPeriodEnd: end.toISOString() },
+        };
+      });
     },
     setSubscriptionPastDue() {
       patchStudio((s) => ({ ...s, subscription: { ...s.subscription, status: 'PAST_DUE' } }));
@@ -504,48 +556,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 
-// Compra/registro de un plan: crea UserPackage + Payment.
+// Compra/registro de un plan: crea UserPackage + Payment (local + Supabase).
 function applyPurchase(
   setDb: React.Dispatch<React.SetStateAction<Database>>,
+  db: Database,
   userId: string,
   packageId: string,
   method: PaymentMethod,
   registeredBy: 'studio' | 'online',
 ) {
-  setDb((prev) => {
-    const pkg = prev.packages.find((p) => p.id === packageId);
-    if (!pkg) return prev;
-    const expires = new Date();
-    expires.setDate(expires.getDate() + pkg.validityDays);
-    const upId = nextId('up');
-    const payment: Payment = {
-      id: nextId('pay'),
-      userId,
-      amountUsd: pkg.priceUsd,
-      method,
-      packageId: pkg.id,
-      concept: pkg.name,
-      paidAt: new Date().toISOString(),
-      registeredBy,
-    };
-    return {
-      ...prev,
-      userPackages: [
-        ...prev.userPackages,
-        {
-          id: upId,
-          userId,
-          packageId: pkg.id,
-          creditsTotal: pkg.classCredits,
-          creditsUsed: 0,
-          purchasedAt: new Date().toISOString(),
-          expiresAt: expires.toISOString(),
-          active: true,
-        },
-      ],
-      payments: [...prev.payments, payment],
-    };
-  });
+  const pkg = db.packages.find((p) => p.id === packageId);
+  if (!pkg) return;
+  const expires = new Date();
+  expires.setDate(expires.getDate() + pkg.validityDays);
+  const userPackage = {
+    id: newId(),
+    userId,
+    packageId: pkg.id,
+    creditsTotal: pkg.classCredits,
+    creditsUsed: 0,
+    purchasedAt: new Date().toISOString(),
+    expiresAt: expires.toISOString(),
+    active: true,
+  };
+  const payment: Payment = {
+    id: newId(),
+    userId,
+    amountUsd: pkg.priceUsd,
+    method,
+    packageId: pkg.id,
+    concept: pkg.name,
+    paidAt: new Date().toISOString(),
+    registeredBy,
+  };
+  setDb((prev) => ({
+    ...prev,
+    userPackages: [...prev.userPackages, userPackage],
+    payments: [...prev.payments, payment],
+  }));
+  void dbInsert('user_packages', rowUserPackage(userPackage));
+  void dbInsert('payments', rowPayment(payment));
 }
 
 export function useStore(): StoreValue {
