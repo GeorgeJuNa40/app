@@ -1,38 +1,43 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../lib/store';
-import type { Role } from '../../lib/types';
 
-// Pantalla de inicio: video de marca (logo animado) + input único de CEU,
-// luego selección de rol para el login del MVP.
+type Mode = 'login' | 'join' | 'create';
+
+// Pantalla de inicio: registro real (crear estudio o unirse por CEU) e inicio
+// de sesión, contra Supabase. La redirección la hace App.tsx según el rol.
 export default function OnboardingScreen() {
-  const { db, loginWithCeu, resetDemoData } = useStore();
-  const navigate = useNavigate();
+  const { signIn, signUp } = useStore();
+  const [mode, setMode] = useState<Mode>('login');
+
+  const [fullName, setFullName] = useState('');
+  const [studioName, setStudioName] = useState('');
   const [ceu, setCeu] = useState('');
-  const [validStudio, setValidStudio] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const checkCeu = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const studio = db.studios.find(
-      (s) => s.ceuCode.toUpperCase() === ceu.trim().toUpperCase(),
-    );
-    if (!studio) {
-      setError('Código de Estudio no encontrado. Prueba con ZEN-2024.');
-      setValidStudio(null);
-      return;
-    }
     setError('');
-    setValidStudio(studio.name);
-  };
-
-  const enterAs = (role: Role) => {
-    const user = loginWithCeu(ceu, role);
-    if (!user) {
-      setError('No existe un usuario con ese rol en este estudio.');
-      return;
+    setBusy(true);
+    try {
+      if (mode === 'login') {
+        await signIn(email, password);
+      } else if (mode === 'create') {
+        if (!studioName.trim()) throw new Error('Escribe el nombre de tu estudio.');
+        await signUp({ fullName, email, password, studioName });
+      } else {
+        if (!ceu.trim()) throw new Error('Escribe el Código de Estudio (CEU).');
+        await signUp({ fullName, email, password, ceuCode: ceu });
+      }
+      // Al haber sesión, App.tsx redirige automáticamente al panel según el rol.
+    } catch (err) {
+      setError(translateError(err));
+    } finally {
+      setBusy(false);
     }
-    navigate(role === 'STUDIO_ADMIN' ? '/admin' : role === 'COACH' ? '/coach' : '/app');
   };
 
   return (
@@ -49,64 +54,69 @@ export default function OnboardingScreen() {
             <div className="brand-float text-4xl font-black text-brand">Move yA</div>
           </div>
 
-          <h1 className="text-2xl font-bold text-ink">Bienvenido</h1>
+          <h1 className="text-2xl font-bold text-ink">
+            {mode === 'login' ? 'Bienvenido de nuevo' : mode === 'create' ? 'Crea tu estudio' : 'Únete a tu estudio'}
+          </h1>
           <p className="text-ink-faint mt-1 mb-6">
-            Ingresa tu <strong>Código de Estudio Único (CEU)</strong> para continuar.
+            {mode === 'login'
+              ? 'Ingresa con tu correo y contraseña.'
+              : mode === 'create'
+                ? 'Registra tu estudio y empieza tu prueba.'
+                : 'Ingresa el Código de Estudio (CEU) que te dieron.'}
           </p>
 
-          <form onSubmit={checkCeu} className="space-y-3">
-            <input
-              value={ceu}
-              onChange={(e) => {
-                setCeu(e.target.value);
-                setValidStudio(null);
-              }}
-              placeholder="Ej. ZEN-2024"
-              className="w-full rounded-xl border border-cream-dark bg-white px-4 py-3 text-center text-lg font-semibold tracking-widest uppercase outline-none focus:ring-2 ring-brand"
-            />
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            {!validStudio && (
-              <button
-                type="submit"
-                className="w-full rounded-xl bg-brand px-4 py-3 font-semibold text-cream shadow-zen hover:opacity-90"
-              >
-                Verificar código
-              </button>
+          <form onSubmit={submit} className="space-y-3">
+            {mode !== 'login' && (
+              <Input label="Tu nombre" value={fullName} onChange={setFullName} placeholder="Ej. Ana López" required />
             )}
+            {mode === 'create' && (
+              <Input label="Nombre del estudio" value={studioName} onChange={setStudioName} placeholder="Ej. Estudio Zen" required />
+            )}
+            {mode === 'join' && (
+              <Input
+                label="Código de Estudio (CEU)"
+                value={ceu}
+                onChange={(v) => setCeu(v.toUpperCase())}
+                placeholder="Ej. ZEN-2024"
+                required
+              />
+            )}
+            <Input label="Correo" type="email" value={email} onChange={setEmail} placeholder="tu@correo.com" required />
+            <Input label="Contraseña" type="password" value={password} onChange={setPassword} placeholder="••••••••" required />
+
+            {error && <p className="text-sm text-red-600">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={busy}
+              className="w-full rounded-xl bg-brand px-4 py-3 font-semibold text-cream shadow-zen hover:opacity-90 disabled:opacity-60"
+            >
+              {busy ? 'Un momento…' : mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
+            </button>
           </form>
 
-          {validStudio && (
-            <div className="mt-6 animate-[fadeIn_.3s_ease]">
-              <div className="rounded-xl bg-white border border-cream-dark p-4 mb-4">
-                <p className="text-xs uppercase text-ink-faint">Estudio vinculado</p>
-                <p className="font-bold text-brand">{validStudio}</p>
-              </div>
-              <p className="text-sm text-ink-faint mb-3">
-                Selecciona tu rol para acceder (demo):
-              </p>
-              <div className="space-y-2">
-                <RoleButton label="Entrar como Estudio (Admin)" onClick={() => enterAs('STUDIO_ADMIN')} />
-                <RoleButton label="Entrar como Coach" onClick={() => enterAs('COACH')} />
-                <RoleButton label="Entrar como Alumno" onClick={() => enterAs('STUDENT')} />
-              </div>
-            </div>
-          )}
-
-          <div className="mt-8 rounded-xl bg-cream-dark/50 p-4 text-xs text-ink-soft">
-            <p className="font-semibold mb-1">Códigos de demo</p>
-            <p>CEU: <code className="font-mono">ZEN-2024</code></p>
-            <button
-              onClick={resetDemoData}
-              className="mt-2 underline text-ink-faint hover:text-ink"
-            >
-              Reiniciar datos de demostración
-            </button>
+          {/* Cambiar de modo */}
+          <div className="mt-6 space-y-2 text-sm">
+            {mode !== 'login' && (
+              <button onClick={() => switchTo('login', setMode, setError)} className="text-ink-faint hover:text-ink">
+                ¿Ya tienes cuenta? <span className="text-brand font-medium">Inicia sesión</span>
+              </button>
+            )}
+            {mode === 'login' && (
+              <>
+                <button onClick={() => switchTo('join', setMode, setError)} className="block text-ink-faint hover:text-ink">
+                  ¿Tienes un CEU? <span className="text-brand font-medium">Únete a tu estudio</span>
+                </button>
+                <button onClick={() => switchTo('create', setMode, setError)} className="block text-ink-faint hover:text-ink">
+                  ¿Eres un estudio nuevo? <span className="text-brand font-medium">Crea tu cuenta</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to {opacity:1;transform:none;} }
         @keyframes brandFloat { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);} }
         .brand-float{ animation: brandFloat 4s ease-in-out infinite; }
       `}</style>
@@ -114,14 +124,49 @@ export default function OnboardingScreen() {
   );
 }
 
-function RoleButton({ label, onClick }: { label: string; onClick: () => void }) {
+function switchTo(m: Mode, setMode: (m: Mode) => void, setError: (s: string) => void) {
+  setError('');
+  setMode(m);
+}
+
+function Input({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = 'text',
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+  required?: boolean;
+}) {
   return (
-    <button
-      onClick={onClick}
-      className="w-full rounded-xl border border-cream-dark bg-white px-4 py-3 text-left font-medium text-ink hover:border-brand hover:bg-cream-dark/40 transition flex items-center justify-between"
-    >
-      {label}
-      <span className="text-brand">→</span>
-    </button>
+    <label className="block">
+      <span className="mb-1 block text-sm font-medium text-ink-soft">{label}</span>
+      <input
+        type={type}
+        value={value}
+        required={required}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-cream-dark bg-white px-4 py-3 outline-none focus:ring-2 ring-brand"
+      />
+    </label>
   );
+}
+
+// Traduce los errores técnicos de Supabase a mensajes claros en español.
+function translateError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (/Invalid login credentials/i.test(msg)) return 'Correo o contraseña incorrectos.';
+  if (/User already registered/i.test(msg)) return 'Ese correo ya está registrado. Inicia sesión.';
+  if (/Database error saving new user/i.test(msg))
+    return 'No se pudo completar el registro. Verifica que el CEU exista o el nombre del estudio.';
+  if (/Password should be at least/i.test(msg)) return 'La contraseña debe tener al menos 6 caracteres.';
+  if (/CEU/i.test(msg)) return msg;
+  return msg || 'Ocurrió un error. Inténtalo de nuevo.';
 }

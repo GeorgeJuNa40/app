@@ -23,19 +23,17 @@ import type {
   WhatsappConfig,
   WhatsappTemplate,
 } from './types';
-import { seedDatabase } from './mockData';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from './supabase';
+import { loadDatabase, emptyDatabase } from './repo';
 
-const STORAGE_KEY = 'moveya_db_v3';
-const SESSION_KEY = 'moveya_session_v1';
-
-function loadDb(): Database {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as Database;
-  } catch {
-    /* ignore */
-  }
-  return seedDatabase();
+// Datos que se envían al registrarse.
+export interface SignUpInput {
+  fullName: string;
+  email: string;
+  password: string;
+  ceuCode?: string; // para unirse a un estudio existente como ALUMNO
+  studioName?: string; // para crear un estudio nuevo (ADMIN)
 }
 
 function daysUntil(iso: string): number {
@@ -55,9 +53,10 @@ interface StoreValue {
   currentUser: User | null;
   currentStudio: Studio | null;
   // Auth
-  loginWithCeu: (ceu: string, role: User['role']) => User | null;
-  logout: () => void;
-  resetDemoData: () => void;
+  authLoading: boolean;
+  signUp: (input: SignUpInput) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
   // Selectors
   seatsLeft: (sessionId: string) => number;
   studioUsers: (role: User['role']) => User[];
@@ -110,17 +109,43 @@ let idCounter = 1000;
 const nextId = (prefix: string) => `${prefix}_${idCounter++}`;
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [db, setDb] = useState<Database>(loadDb);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(() =>
-    localStorage.getItem(SESSION_KEY),
-  );
+  const [db, setDb] = useState<Database>(emptyDatabase);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
+  // Escucha la sesión de Supabase (inicio/cierre) y la mantiene al recargar.
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-  }, [db]);
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      if (!data.session) setAuthLoading(false);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const currentUserId = session?.user?.id ?? null;
+
+  // Cuando hay sesión, carga los datos del estudio desde Supabase.
   useEffect(() => {
-    if (currentUserId) localStorage.setItem(SESSION_KEY, currentUserId);
-    else localStorage.removeItem(SESSION_KEY);
+    let cancelled = false;
+    if (currentUserId) {
+      setAuthLoading(true);
+      loadDatabase()
+        .then((data) => {
+          if (!cancelled) setDb(data);
+        })
+        .finally(() => {
+          if (!cancelled) setAuthLoading(false);
+        });
+    } else {
+      setDb(emptyDatabase());
+      setAuthLoading(false);
+    }
+    return () => {
+      cancelled = true;
+    };
   }, [currentUserId]);
 
   const currentUser = useMemo(
@@ -155,23 +180,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     db,
     currentUser,
     currentStudio,
+    authLoading,
 
-    loginWithCeu(ceu, role) {
-      const studio = db.studios.find(
-        (s) => s.ceuCode.toUpperCase() === ceu.trim().toUpperCase(),
-      );
-      if (!studio) return null;
-      const user = db.users.find((u) => u.studioId === studio.id && u.role === role);
-      if (!user) return null;
-      setCurrentUserId(user.id);
-      return user;
+    async signUp(input) {
+      const { error } = await supabase.auth.signUp({
+        email: input.email.trim(),
+        password: input.password,
+        options: {
+          data: {
+            full_name: input.fullName.trim(),
+            ...(input.ceuCode ? { ceu_code: input.ceuCode.trim() } : {}),
+            ...(input.studioName ? { studio_name: input.studioName.trim() } : {}),
+          },
+        },
+      });
+      if (error) throw error;
     },
-    logout() {
-      setCurrentUserId(null);
+    async signIn(email, password) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) throw error;
     },
-    resetDemoData() {
-      setDb(seedDatabase());
-      setCurrentUserId(null);
+    async logout() {
+      await supabase.auth.signOut();
     },
 
     seatsLeft(sessionId) {

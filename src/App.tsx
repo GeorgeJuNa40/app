@@ -46,7 +46,16 @@ function RequireRole({ role, children }: { role: Role; children: React.ReactNode
 }
 
 export default function App() {
-  const { currentUser } = useStore();
+  const { currentUser, authLoading } = useStore();
+
+  // Mientras se verifica la sesión, muestra una pantalla de carga simple.
+  if (authLoading) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-cream">
+        <div className="text-2xl font-black text-brand animate-pulse">Move yA</div>
+      </div>
+    );
+  }
 
   return (
     <Routes>
