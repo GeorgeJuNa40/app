@@ -2,6 +2,7 @@
 // formato que usa la app (de snake_case en la base -> camelCase en el front).
 // Gracias a RLS, cada consulta solo devuelve los datos del estudio del usuario.
 import { supabase } from './supabase';
+import { notifyError } from './notify';
 import type {
   Booking,
   ClassSession,
@@ -225,28 +226,28 @@ export async function loadDatabase(): Promise<Database> {
 
 // ---------------------------------------------------------------------------
 // ESCRITURA: guarda cambios en Supabase (camelCase del front -> snake_case).
-// Si algo falla, se registra en la consola sin tumbar la app.
+// Si algo falla, se muestra un aviso en pantalla (notifyError).
 // ---------------------------------------------------------------------------
 
 export async function dbInsert(table: string, row: Row) {
   const { error } = await supabase.from(table).insert(row);
-  if (error) console.error(`insert ${table}:`, error.message);
+  if (error) notifyError(`insert ${table}`, error.message);
 }
 export async function dbUpsert(table: string, row: Row) {
   const { error } = await supabase.from(table).upsert(row);
-  if (error) console.error(`upsert ${table}:`, error.message);
+  if (error) notifyError(`upsert ${table}`, error.message);
 }
 export async function dbUpdate(table: string, id: string, patch: Row) {
   const { error } = await supabase.from(table).update(patch).eq('id', id);
-  if (error) console.error(`update ${table}:`, error.message);
+  if (error) notifyError(`update ${table}`, error.message);
 }
 export async function dbDelete(table: string, id: string) {
   const { error } = await supabase.from(table).delete().eq('id', id);
-  if (error) console.error(`delete ${table}:`, error.message);
+  if (error) notifyError(`delete ${table}`, error.message);
 }
 export async function dbDeleteWhere(table: string, col: string, val: string) {
   const { error } = await supabase.from(table).delete().eq(col, val);
-  if (error) console.error(`delete ${table} where ${col}:`, error.message);
+  if (error) notifyError(`delete ${table}`, error.message);
 }
 
 // Guarda el estudio completo (branding, servicios, whatsapp, suscripción, datos).
@@ -265,7 +266,7 @@ export async function persistStudio(s: Studio) {
       subscription: s.subscription,
     })
     .eq('id', s.id);
-  if (error) console.error('persistStudio:', error.message);
+  if (error) notifyError('guardar estudio', error.message);
 }
 
 // Traductores camelCase -> fila de la base (snake_case).
