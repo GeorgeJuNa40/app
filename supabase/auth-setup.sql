@@ -2,17 +2,17 @@
 -- Move yA — Configuración de Login y Roles (Etapa 1, Paso 4)
 -- ----------------------------------------------------------------------------
 -- Conecta el sistema de login de Supabase (auth.users) con tu tabla `users`,
--- siguiendo el flujo de registro por CEU (Opción 1):
+-- siguiendo el flujo de registro por CEU:
 --
---   * Si la persona se registra con un CEU existente  -> entra como ALUMNO.
---   * Si se registra con un nombre de estudio (sin CEU) -> crea su ESTUDIO
---     y se vuelve ADMIN (con un CEU generado automáticamente).
---   * Los COACHES los da de alta el admin desde su panel (no se auto-registran).
+--   * CEU existente + rol "STUDENT" (por defecto)  -> entra como ALUMNO.
+--   * CEU existente + rol "COACH"                  -> entra como COACH pendiente
+--                                                     (el admin lo aprueba después).
+--   * Nombre de estudio (sin CEU)                  -> crea su ESTUDIO y es ADMIN.
 --
 -- Cómo usarlo:
 --   1. Supabase -> "SQL Editor" -> "New query".
 --   2. Borra lo que haya, pega TODO este archivo y presiona "Run".
---   3. Debe decir "Success". Solo se corre UNA vez.
+--   3. Debe decir "Success". Es seguro correrlo de nuevo (reemplaza la función).
 -- ============================================================================
 
 
@@ -33,6 +33,7 @@ declare
   v_studio_name text  := nullif(trim(meta->>'studio_name'), '');
   v_full_name   text  := coalesce(nullif(trim(meta->>'full_name'), ''),
                                   split_part(new.email, '@', 1));
+  v_signup_role text  := upper(coalesce(nullif(trim(meta->>'signup_role'), ''), 'STUDENT'));
   v_studio_id   text;
   v_initials    text;
 begin
@@ -42,15 +43,22 @@ begin
 
   if v_ceu is not null then
     -----------------------------------------------------------------
-    -- CAMINO A: ALUMNO — el CEU debe existir
+    -- CAMINO A: unirse a un estudio existente (el CEU debe existir)
     -----------------------------------------------------------------
     select id into v_studio_id from public.studios where ceu_code = upper(v_ceu);
     if v_studio_id is null then
       raise exception 'El código de estudio (CEU) "%" no existe.', v_ceu;
     end if;
 
-    insert into public.users (id, studio_id, role, full_name, email, avatar_initials)
-    values (new.id::text, v_studio_id, 'STUDENT', v_full_name, new.email, v_initials);
+    if v_signup_role = 'COACH' then
+      -- COACH: entra como PENDIENTE; el admin lo aprueba en el panel de Coaches.
+      insert into public.users (id, studio_id, role, full_name, email, avatar_initials, coach_status)
+      values (new.id::text, v_studio_id, 'COACH', v_full_name, new.email, v_initials, 'PENDING');
+    else
+      -- ALUMNO (por defecto)
+      insert into public.users (id, studio_id, role, full_name, email, avatar_initials)
+      values (new.id::text, v_studio_id, 'STUDENT', v_full_name, new.email, v_initials);
+    end if;
 
   elsif v_studio_name is not null then
     -----------------------------------------------------------------

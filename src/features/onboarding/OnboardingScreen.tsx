@@ -12,6 +12,7 @@ export default function OnboardingScreen() {
   // código y abrimos directamente el modo "unirse".
   const [searchParams] = useSearchParams();
   const invitedCeu = (searchParams.get('ceu') ?? '').toUpperCase();
+  const isCoachInvite = (searchParams.get('role') ?? '').toLowerCase() === 'coach';
 
   const [mode, setMode] = useState<Mode>(invitedCeu ? 'join' : 'login');
 
@@ -36,7 +37,7 @@ export default function OnboardingScreen() {
         await signUp({ fullName, email, password, studioName });
       } else {
         if (!ceu.trim()) throw new Error('Escribe el Código de Estudio (CEU).');
-        await signUp({ fullName, email, password, ceuCode: ceu });
+        await signUp({ fullName, email, password, ceuCode: ceu, role: isCoachInvite ? 'COACH' : 'STUDENT' });
       }
       // Al haber sesión, App.tsx redirige automáticamente al panel según el rol.
     } catch (err) {
@@ -61,14 +62,22 @@ export default function OnboardingScreen() {
           </div>
 
           <h1 className="text-2xl font-bold text-ink">
-            {mode === 'login' ? 'Bienvenido de nuevo' : mode === 'create' ? 'Crea tu estudio' : 'Únete a tu estudio'}
+            {mode === 'login'
+              ? 'Bienvenido de nuevo'
+              : mode === 'create'
+                ? 'Crea tu estudio'
+                : isCoachInvite
+                  ? 'Únete como coach'
+                  : 'Únete a tu estudio'}
           </h1>
           <p className="text-ink-faint mt-1 mb-6">
             {mode === 'login'
               ? 'Ingresa con tu correo y contraseña.'
               : mode === 'create'
                 ? 'Registra tu estudio y empieza tu prueba.'
-                : 'Ingresa el Código de Estudio (CEU) que te dieron.'}
+                : isCoachInvite
+                  ? 'Regístrate como coach. El estudio deberá aprobarte para que empieces.'
+                  : 'Ingresa el Código de Estudio (CEU) que te dieron.'}
           </p>
 
           <form onSubmit={submit} className="space-y-3">
