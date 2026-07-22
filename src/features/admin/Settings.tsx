@@ -2,6 +2,7 @@ import { useStore } from '../../lib/store';
 import { PageHeader, Card } from '../../components/ui';
 import ImageUpload from '../../components/ImageUpload';
 import StudioLogo from '../../components/StudioLogo';
+import InviteCard from './InviteCard';
 
 // Configuración: datos del negocio, fotos y White-label (branding).
 export default function Settings() {
@@ -16,6 +17,8 @@ export default function Settings() {
   return (
     <>
       <PageHeader title="Configuración" subtitle="Datos de tu negocio, fotos y personalización White-label" />
+
+      <InviteCard ceuCode={s.ceuCode} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Datos del negocio */}
@@ -47,7 +50,6 @@ export default function Settings() {
           <Field label="Dirección">
             <input className="input" value={s.address} onChange={(e) => updateStudio({ address: e.target.value })} />
           </Field>
-          <p className="text-xs text-ink-faint">Código de Estudio Único (CEU): <span className="font-mono">{s.ceuCode}</span></p>
         </Card>
 
         {/* Fotos */}

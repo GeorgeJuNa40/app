@@ -64,7 +64,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const SidebarContent = (
     <div className="flex h-full flex-col">
       <div className="px-5 py-6 border-b border-cream-dark">
-        <StudioLogo branding={currentStudio.branding} imgClass="h-10 max-w-[180px]" />
+        <StudioLogo
+          branding={currentStudio.branding}
+          imgClass="h-9 max-w-[110px]"
+          textClass="text-base font-bold text-brand"
+          showName
+        />
         <p className="text-xs text-ink-faint mt-1.5">
           powered by <span className="font-semibold">Move yA</span>
         </p>

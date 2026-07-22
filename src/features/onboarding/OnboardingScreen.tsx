@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useStore } from '../../lib/store';
 
 type Mode = 'login' | 'join' | 'create';
@@ -7,11 +8,16 @@ type Mode = 'login' | 'join' | 'create';
 // de sesión, contra Supabase. La redirección la hace App.tsx según el rol.
 export default function OnboardingScreen() {
   const { signIn, signUp } = useStore();
-  const [mode, setMode] = useState<Mode>('login');
+  // Si el alumno llega por un link de invitación (?ceu=XXXX), pre-llenamos el
+  // código y abrimos directamente el modo "unirse".
+  const [searchParams] = useSearchParams();
+  const invitedCeu = (searchParams.get('ceu') ?? '').toUpperCase();
+
+  const [mode, setMode] = useState<Mode>(invitedCeu ? 'join' : 'login');
 
   const [fullName, setFullName] = useState('');
   const [studioName, setStudioName] = useState('');
-  const [ceu, setCeu] = useState('');
+  const [ceu, setCeu] = useState(invitedCeu);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
