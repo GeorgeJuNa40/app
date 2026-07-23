@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useStore } from './lib/store';
+import { isSupabaseConfigured } from './lib/supabase';
 import type { Role } from './lib/types';
 import AppShell from './components/layout/AppShell';
 
@@ -47,6 +48,23 @@ function RequireRole({ role, children }: { role: Role; children: React.ReactNode
 
 export default function App() {
   const { currentUser, authLoading } = useStore();
+
+  // Si faltan las llaves de conexión, avisa claramente (en vez de "Failed to fetch").
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-cream p-6 text-center">
+        <div className="max-w-md">
+          <h1 className="mb-3 text-2xl font-black text-brand">Move yA</h1>
+          <p className="text-ink">Falta configurar las llaves de conexión en Vercel.</p>
+          <p className="mt-3 text-sm text-ink-soft">
+            En Vercel → <b>Settings → Environment Variables</b>, agrega{' '}
+            <b>VITE_SUPABASE_URL</b> y <b>VITE_SUPABASE_ANON_KEY</b>, marca{' '}
+            <b>Production</b>, y vuelve a publicar (<b>Redeploy</b>).
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Mientras se verifica la sesión, muestra una pantalla de carga simple.
   if (authLoading) {

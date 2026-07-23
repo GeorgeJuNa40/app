@@ -50,8 +50,9 @@ export interface SignUpInput {
   fullName: string;
   email: string;
   password: string;
-  ceuCode?: string; // para unirse a un estudio existente como ALUMNO
+  ceuCode?: string; // para unirse a un estudio existente
   studioName?: string; // para crear un estudio nuevo (ADMIN)
+  role?: 'COACH' | 'STUDENT'; // rol al unirse por CEU (por defecto STUDENT)
 }
 
 function daysUntil(iso: string): number {
@@ -213,6 +214,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             full_name: input.fullName.trim(),
             ...(input.ceuCode ? { ceu_code: input.ceuCode.trim() } : {}),
             ...(input.studioName ? { studio_name: input.studioName.trim() } : {}),
+            ...(input.role ? { signup_role: input.role } : {}),
           },
         },
       });
