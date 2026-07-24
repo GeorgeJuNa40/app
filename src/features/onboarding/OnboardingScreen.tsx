@@ -24,6 +24,7 @@ export default function OnboardingScreen() {
 
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +88,7 @@ export default function OnboardingScreen() {
             {mode === 'create' && (
               <Input label="Nombre del estudio" value={studioName} onChange={setStudioName} placeholder="Ej. Estudio Zen" required />
             )}
-            {mode === 'join' && (
+            {mode === 'join' && !invitedCeu && (
               <Input
                 label="Código de Estudio (CEU)"
                 value={ceu}
@@ -96,8 +97,35 @@ export default function OnboardingScreen() {
                 required
               />
             )}
+            {mode === 'join' && invitedCeu && (
+              <div className="rounded-xl border border-cream-dark bg-cream-dark/30 px-4 py-3 text-sm text-ink-soft">
+                Te unes con el código{' '}
+                <span className="font-mono font-bold text-brand">{invitedCeu}</span>
+                {isCoachInvite ? ' como coach.' : '.'} Solo completa tus datos.
+              </div>
+            )}
             <Input label="Correo" type="email" value={email} onChange={setEmail} placeholder="tu@correo.com" required />
-            <Input label="Contraseña" type="password" value={password} onChange={setPassword} placeholder="••••••••" required />
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-ink-soft">Contraseña</span>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  required
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full rounded-xl border border-cream-dark bg-white px-4 py-3 pr-12 outline-none focus:ring-2 ring-brand"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 grid w-12 place-items-center text-lg text-ink-faint"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
+            </label>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
 

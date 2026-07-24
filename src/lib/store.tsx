@@ -101,6 +101,14 @@ interface StoreValue {
   upsertCoach: (coach: User) => void;
   // Perfil — foto de cualquier usuario (admin, coach, alumno)
   updateUserAvatar: (userId: string, avatarUrl: string) => void;
+  // Perfil propio — el usuario edita sus datos (coach: bio, especialidades, etc.)
+  updateMyProfile: (patch: {
+    fullName?: string;
+    phone?: string;
+    bio?: string;
+    specialties?: string[];
+    yearsExp?: number;
+  }) => void;
   // Estudio — servicios
   addService: (name: string, description: string) => void;
   updateService: (id: string, patch: Partial<OptionalService>) => void;
@@ -176,16 +184,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [db.studios, currentUser],
   );
 
-  // White-label: aplica branding a las CSS vars en vivo.
+  // White-label: aplica el branding del estudio en vivo. Si aún no hay estudio
+  // (pantalla de registro/login), usa la paleta por defecto de Move yA.
   useEffect(() => {
     const b = currentStudio?.branding;
     const root = document.documentElement;
-    if (b) {
-      root.style.setProperty('--brand-primary', b.primaryColor);
-      root.style.setProperty('--brand-secondary', b.secondaryColor);
-      root.style.setProperty('--brand-accent', b.accentColor);
-      root.style.setProperty('--brand-font', `'${b.fontFamily}', system-ui, sans-serif`);
-    }
+    root.style.setProperty('--brand-primary', b?.primaryColor ?? '#2D5A4C');
+    root.style.setProperty('--brand-secondary', b?.secondaryColor ?? '#F4F1EA');
+    root.style.setProperty('--brand-accent', b?.accentColor ?? '#333333');
+    root.style.setProperty('--brand-font', `'${b?.fontFamily ?? 'Inter'}', system-ui, sans-serif`);
   }, [currentStudio]);
 
   // Helper: modifica el estudio actual (local) y lo guarda en Supabase.
@@ -263,10 +270,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     bookSession(sessionId) {
       if (!currentUser) return;
-      const already = db.bookings.find(
-        (b) => b.userId === currentUser.id && b.sessionId === sessionId && b.status !== 'CANCELED',
+      // Puede existir una reserva previa (incluso CANCELADA) para esta sesión.
+      const existing = db.bookings.find(
+        (b) => b.userId === currentUser.id && b.sessionId === sessionId,
       );
-      if (already) return;
+      if (existing && existing.status !== 'CANCELED') return; // ya está reservada
       const s = db.classSessions.find((x) => x.id === sessionId);
       if (!s) return;
       const seats =
@@ -276,6 +284,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const activePkg = db.userPackages.find(
         (p) => p.userId === currentUser.id && p.active && p.creditsUsed < p.creditsTotal,
       );
+
+      if (existing) {
+        // Reactivar la reserva cancelada (evita chocar con la clave única user+sesión).
+        setDb((prev) => ({
+          ...prev,
+          bookings: prev.bookings.map((b) =>
+            b.id === existing.id
+              ? { ...b, status: 'RESERVED', userPackageId: activePkg?.id ?? null }
+              : b,
+          ),
+          userPackages: activePkg
+            ? prev.userPackages.map((p) =>
+                p.id === activePkg.id ? { ...p, creditsUsed: p.creditsUsed + 1 } : p,
+              )
+            : prev.userPackages,
+        }));
+        void dbUpdate('bookings', existing.id, {
+          status: 'RESERVED',
+          user_package_id: activePkg?.id ?? null,
+        });
+        if (activePkg) void dbUpdate('user_packages', activePkg.id, { credits_used: activePkg.creditsUsed + 1 });
+        return;
+      }
+
       const booking: Booking = {
         id: newId(),
         userId: currentUser.id,
@@ -447,6 +479,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         users: prev.users.map((u) => (u.id === userId ? { ...u, avatarUrl } : u)),
       }));
       void dbUpdate('users', userId, { avatar_url: avatarUrl });
+    },
+    updateMyProfile(patch) {
+      if (!currentUser) return;
+      const uid = currentUser.id;
+      setDb((prev) => ({
+        ...prev,
+        users: prev.users.map((u) => {
+          if (u.id !== uid) return u;
+          const next: User = { ...u };
+          if (patch.fullName !== undefined) next.fullName = patch.fullName;
+          if (patch.phone !== undefined) next.phone = patch.phone;
+          if (patch.bio !== undefined || patch.specialties !== undefined || patch.yearsExp !== undefined) {
+            next.coachProfile = {
+              bio: patch.bio ?? u.coachProfile?.bio ?? '',
+              specialties: patch.specialties ?? u.coachProfile?.specialties ?? [],
+              yearsExp: patch.yearsExp ?? u.coachProfile?.yearsExp ?? 0,
+            };
+          }
+          return next;
+        }),
+      }));
+      const row: Record<string, unknown> = {};
+      if (patch.fullName !== undefined) row.full_name = patch.fullName;
+      if (patch.phone !== undefined) row.phone = patch.phone;
+      if (patch.bio !== undefined) row.coach_bio = patch.bio;
+      if (patch.specialties !== undefined) row.coach_specialties = patch.specialties;
+      if (patch.yearsExp !== undefined) row.coach_years_exp = patch.yearsExp;
+      if (Object.keys(row).length) void dbUpdate('users', uid, row);
     },
 
     addService(name, description) {
