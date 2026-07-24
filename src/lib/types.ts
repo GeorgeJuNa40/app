@@ -27,6 +27,7 @@ export interface OptionalService {
   id: string;
   name: string;
   description: string;
+  whatsapp?: string; // WhatsApp del proveedor del servicio (a quién contactar)
   enabled: boolean;
   custom: boolean; // los custom se pueden eliminar
 }

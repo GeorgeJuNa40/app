@@ -19,8 +19,13 @@ export default function BookClasses() {
     [db.bookings, uid],
   );
 
-  const activePkg = db.userPackages.find((p) => p.userId === uid && p.active);
-  const creditsLeft = activePkg ? activePkg.creditsTotal - activePkg.creditsUsed : 0;
+  // Suma los créditos disponibles de TODOS los paquetes activos del alumno.
+  const activePkgs = db.userPackages.filter((p) => p.userId === uid && p.active);
+  const creditsLeft = activePkgs.reduce(
+    (total, p) => total + Math.max(0, p.creditsTotal - p.creditsUsed),
+    0,
+  );
+  const hasPackage = activePkgs.length > 0;
 
   return (
     <>
@@ -29,17 +34,24 @@ export default function BookClasses() {
         subtitle="Elige tu próxima sesión — disponibilidad en tiempo real"
       />
 
-      {!activePkg && (
+      {creditsLeft === 0 && (
         <Card className="mb-6 p-4 bg-amber-50 border-amber-200">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <p className="text-sm text-amber-800">
-              No tienes clases disponibles. Compra un paquete para reservar.
+              {hasPackage
+                ? 'Ya usaste todas tus clases. Compra otro paquete para seguir reservando.'
+                : 'No tienes clases disponibles. Compra un paquete para reservar.'}
             </p>
             <Link to="/app/packages">
               <Button variant="secondary">Ver paquetes</Button>
             </Link>
           </div>
         </Card>
+      )}
+      {creditsLeft > 0 && (
+        <p className="mb-4 text-sm text-ink-soft">
+          Te quedan <span className="font-semibold text-brand">{creditsLeft}</span> clase(s) para reservar.
+        </p>
       )}
 
       <WeekCalendar

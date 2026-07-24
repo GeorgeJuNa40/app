@@ -1,14 +1,19 @@
 import { useStore } from '../../lib/store';
 import { PageHeader, Card, Button, EmptyState } from '../../components/ui';
 
-// Alumno: servicios opcionales activados por el estudio + contacto por WhatsApp.
+// Alumno: servicios activados por el estudio. El botón lleva DIRECTO al WhatsApp
+// del proveedor de cada servicio (no al del estudio).
 export default function OptionalServices() {
   const { currentStudio } = useStore();
   const services = currentStudio!.services.filter((s) => s.enabled);
-  const wa = currentStudio!.whatsapp.number;
 
-  const waLink = (service: string) =>
-    wa ? `https://wa.me/${wa}?text=${encodeURIComponent(`Hola, quiero información sobre el servicio de ${service}.`)}` : undefined;
+  const waLink = (num: string | undefined, service: string) => {
+    const digits = (num ?? '').replace(/\D/g, '');
+    if (!digits) return undefined;
+    return `https://wa.me/${digits}?text=${encodeURIComponent(
+      `Hola, quiero información sobre el servicio de ${service}.`,
+    )}`;
+  };
 
   return (
     <>
@@ -18,7 +23,7 @@ export default function OptionalServices() {
       ) : (
         <div className="grid gap-4 md:grid-cols-3">
           {services.map((s) => {
-            const link = waLink(s.name);
+            const link = waLink(s.whatsapp, s.name);
             return (
               <Card key={s.id} className="p-6 flex flex-col">
                 <div className="text-4xl">✚</div>
@@ -26,10 +31,12 @@ export default function OptionalServices() {
                 <p className="text-sm text-ink-faint mt-1 flex-1">{s.description}</p>
                 {link ? (
                   <a href={link} target="_blank" rel="noreferrer" className="mt-4">
-                    <Button className="w-full">Agendar por WhatsApp</Button>
+                    <Button className="w-full">Contactar por WhatsApp</Button>
                   </a>
                 ) : (
-                  <Button className="mt-4" variant="secondary" disabled>WhatsApp no disponible</Button>
+                  <Button className="mt-4" variant="secondary" disabled>
+                    Contacto no disponible
+                  </Button>
                 )}
               </Card>
             );

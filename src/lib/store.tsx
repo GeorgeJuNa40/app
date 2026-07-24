@@ -110,7 +110,7 @@ interface StoreValue {
     yearsExp?: number;
   }) => void;
   // Estudio — servicios
-  addService: (name: string, description: string) => void;
+  addService: (name: string, description: string, whatsapp?: string) => void;
   updateService: (id: string, patch: Partial<OptionalService>) => void;
   removeService: (id: string) => void;
   // Estudio — recompensas
@@ -281,9 +281,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         s.capacity -
         db.bookings.filter((b) => b.sessionId === sessionId && b.status !== 'CANCELED').length;
       if (seats <= 0) return;
+      // Debe tener un paquete activo con créditos disponibles (cualquiera de ellos).
       const activePkg = db.userPackages.find(
         (p) => p.userId === currentUser.id && p.active && p.creditsUsed < p.creditsTotal,
       );
+      if (!activePkg) return; // sin clases disponibles, no puede reservar
 
       if (existing) {
         // Reactivar la reserva cancelada (evita chocar con la clave única user+sesión).
@@ -509,12 +511,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (Object.keys(row).length) void dbUpdate('users', uid, row);
     },
 
-    addService(name, description) {
+    addService(name, description, whatsapp) {
       patchStudio((s) => ({
         ...s,
         services: [
           ...s.services,
-          { id: newId(), name, description, enabled: true, custom: true },
+          { id: newId(), name, description, whatsapp: whatsapp ?? '', enabled: true, custom: true },
         ],
       }));
     },
