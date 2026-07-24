@@ -3,7 +3,7 @@ import { useStore } from '../../lib/store';
 import { PageHeader, Card, Badge, Button, StatCard } from '../../components/ui';
 import Avatar from '../../components/Avatar';
 import { fmtDay, fmtTime, usd } from '../../lib/format';
-import type { MembershipState, PaymentMethod, User } from '../../lib/types';
+import type { MembershipState, Payment, PaymentMethod, User } from '../../lib/types';
 
 const STATE_META: Record<MembershipState, { label: string; tone: 'success' | 'warning' | 'danger' | 'neutral' }> = {
   active: { label: 'Activa', tone: 'success' },
@@ -19,7 +19,13 @@ const METHOD_LABEL: Record<PaymentMethod, string> = {
   paypal: 'PayPal',
 };
 
-// CRM de alumnos: contacto, clases agendadas, membresía y pagos manuales.
+// Origen del pago: en el estudio (manual) o en línea (tarjeta / pasarela).
+const SOURCE_LABEL: Record<'studio' | 'online', string> = {
+  studio: 'En estudio',
+  online: 'En línea',
+};
+
+// CRM de alumnos: contacto, clases agendadas, membresía y registro de pagos.
 export default function MembersCRM() {
   const { db, currentStudio, studioUsers, membership, registerManualPlan } = useStore();
   const students = studioUsers('STUDENT');
@@ -28,6 +34,8 @@ export default function MembersCRM() {
   const [query, setQuery] = useState('');
   const [detail, setDetail] = useState<User | null>(null);
   const [payFor, setPayFor] = useState<User | null>(null);
+
+  const studentIds = useMemo(() => new Set(students.map((s) => s.id)), [students]);
 
   const filtered = useMemo(
     () =>
@@ -46,8 +54,11 @@ export default function MembersCRM() {
       else if (st === 'expired') expired++;
       else none++;
     }
-    return { active, expiring, expired, none };
-  }, [students, membership]);
+    const income = db.payments
+      .filter((p) => studentIds.has(p.userId))
+      .reduce((a, p) => a + p.amountUsd, 0);
+    return { active, expiring, expired, none, income };
+  }, [students, membership, db.payments, studentIds]);
 
   const bookingsOf = (userId: string) =>
     db.bookings
@@ -56,19 +67,25 @@ export default function MembersCRM() {
       .filter((x) => x.s)
       .sort((a, b) => a.s.startsAt.localeCompare(b.s.startsAt));
 
+  const paymentsOf = (userId: string) =>
+    db.payments.filter((p) => p.userId === userId).sort((a, b) => b.paidAt.localeCompare(a.paidAt));
+
+  const lastPaymentOf = (userId: string): Payment | undefined => paymentsOf(userId)[0];
+
   return (
     <>
       <PageHeader
         title="Miembros (CRM)"
-        subtitle="Alumnos registrados, sus clases y membresías"
+        subtitle="Alumnos registrados, sus clases, membresías y pagos"
         action={<Button onClick={() => setPayFor(students[0] ?? null)}>+ Registrar pago</Button>}
       />
 
-      <div className="grid gap-4 sm:grid-cols-4 mb-6">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5 mb-6">
         <StatCard label="Total alumnos" value={students.length} icon="⚇" />
         <StatCard label="Membresías activas" value={summary.active} icon="✓" />
         <StatCard label="Por vencer" value={summary.expiring} icon="⏳" />
         <StatCard label="Vencidas / sin plan" value={summary.expired + summary.none} icon="•" />
+        <StatCard label="Ingresos registrados" value={usd(summary.income)} icon="$" />
       </div>
 
       <input
@@ -88,6 +105,7 @@ export default function MembersCRM() {
                 <th className="px-4 py-3 font-semibold">Contacto</th>
                 <th className="px-4 py-3 font-semibold">Clases</th>
                 <th className="px-4 py-3 font-semibold">Plan</th>
+                <th className="px-4 py-3 font-semibold">Último pago</th>
                 <th className="px-4 py-3 font-semibold">Membresía</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -97,6 +115,7 @@ export default function MembersCRM() {
                 const m = membership(s.id);
                 const meta = STATE_META[m.state];
                 const classCount = bookingsOf(s.id).length;
+                const last = lastPaymentOf(s.id);
                 return (
                   <tr key={s.id} className="hover:bg-cream-dark/20">
                     <td className="px-4 py-3">
@@ -114,6 +133,16 @@ export default function MembersCRM() {
                     </td>
                     <td className="px-4 py-3 text-ink-soft">{classCount}</td>
                     <td className="px-4 py-3 text-ink-soft">{m.planName ?? '—'}</td>
+                    <td className="px-4 py-3 text-ink-soft">
+                      {last ? (
+                        <div>
+                          <p>{usd(last.amountUsd)} · {METHOD_LABEL[last.method]}</p>
+                          <p className="text-xs text-ink-faint">{SOURCE_LABEL[last.registeredBy]} · {fmtDay(last.paidAt)}</p>
+                        </div>
+                      ) : (
+                        <span className="text-ink-faint">Sin pagos</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <Badge tone={meta.tone}>{meta.label}</Badge>
                       {m.state !== 'none' && m.state !== 'expired' && (
@@ -137,6 +166,7 @@ export default function MembersCRM() {
         {filtered.map((s) => {
           const m = membership(s.id);
           const meta = STATE_META[m.state];
+          const last = lastPaymentOf(s.id);
           return (
             <Card key={s.id} className="p-4">
               <div className="flex items-start justify-between">
@@ -147,6 +177,9 @@ export default function MembersCRM() {
                 <Badge tone={meta.tone}>{meta.label}</Badge>
               </div>
               <p className="mt-2 text-sm text-ink-soft">{m.planName ?? 'Sin plan'} · {bookingsOf(s.id).length} clases</p>
+              <p className="mt-1 text-xs text-ink-faint">
+                {last ? `Últ. pago: ${usd(last.amountUsd)} · ${METHOD_LABEL[last.method]} (${SOURCE_LABEL[last.registeredBy]})` : 'Sin pagos registrados'}
+              </p>
               <div className="mt-3 flex gap-2">
                 <Button variant="secondary" className="flex-1" onClick={() => setDetail(s)}>Ver</Button>
                 <Button className="flex-1" onClick={() => setPayFor(s)}>Registrar pago</Button>
@@ -163,7 +196,7 @@ export default function MembersCRM() {
             const m = membership(detail.id);
             const meta = STATE_META[m.state];
             const classes = bookingsOf(detail.id);
-            const pays = db.payments.filter((p) => p.userId === detail.id).sort((a, b) => b.paidAt.localeCompare(a.paidAt));
+            const pays = paymentsOf(detail.id);
             return (
               <>
                 <div className="flex items-center gap-3 mb-4">
@@ -193,13 +226,18 @@ export default function MembersCRM() {
                   })}
                 </div>
 
-                <h3 className="font-semibold text-ink text-sm mb-2">Pagos ({pays.length})</h3>
-                <div className="space-y-1.5 mb-4 max-h-32 overflow-y-auto">
+                <h3 className="font-semibold text-ink text-sm mb-2">Historial de pagos ({pays.length})</h3>
+                <div className="space-y-1.5 mb-4 max-h-40 overflow-y-auto">
                   {pays.length === 0 && <p className="text-sm text-ink-faint">Sin pagos registrados.</p>}
                   {pays.map((p) => (
-                    <div key={p.id} className="flex justify-between rounded-lg bg-cream-dark/40 px-3 py-1.5 text-sm">
-                      <span className="text-ink">{p.concept} · {METHOD_LABEL[p.method]}</span>
-                      <span className="text-ink-faint">{usd(p.amountUsd)} · {fmtDay(p.paidAt)}</span>
+                    <div key={p.id} className="flex items-center justify-between rounded-lg bg-cream-dark/40 px-3 py-2 text-sm">
+                      <div>
+                        <p className="text-ink">{p.concept}</p>
+                        <p className="text-xs text-ink-faint">
+                          {METHOD_LABEL[p.method]} · {SOURCE_LABEL[p.registeredBy]} · {fmtDay(p.paidAt)}
+                        </p>
+                      </div>
+                      <span className="font-semibold text-brand">{usd(p.amountUsd)}</span>
                     </div>
                   ))}
                 </div>
@@ -258,7 +296,10 @@ function RegisterPaymentModal({
   return (
     <Modal onClose={onClose}>
       <h2 className="text-lg font-bold text-ink mb-1">Registrar pago</h2>
-      <p className="text-sm text-ink-faint mb-4">Asigna un plan al alumno (pago en efectivo, tarjeta o transferencia en el estudio).</p>
+      <p className="text-sm text-ink-faint mb-4">
+        Asigna un plan al alumno y registra cómo pagó (efectivo, tarjeta o transferencia en el estudio).
+        Los pagos con tarjeta en línea se registran solos.
+      </p>
       <div className="space-y-4">
         <Field label="Alumno">
           <select className="input" value={userId} onChange={(e) => setUserId(e.target.value)}>
@@ -270,7 +311,7 @@ function RegisterPaymentModal({
             {packages.map((p) => <option key={p.id} value={p.id}>{p.name} — {usd(p.priceUsd)}</option>)}
           </select>
         </Field>
-        <Field label="Método de pago">
+        <Field label="Forma de pago">
           <div className="flex flex-wrap gap-2">
             {(['cash', 'card', 'transfer', 'paypal'] as PaymentMethod[]).map((mth) => (
               <button
