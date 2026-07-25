@@ -4,6 +4,8 @@ export type Role = 'STUDIO_ADMIN' | 'COACH' | 'STUDENT';
 
 export type SubscriptionStatus = 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING';
 
+export type PlanId = 'inicio' | 'pro' | 'premium';
+
 export type BookingStatus = 'RESERVED' | 'ATTENDED' | 'CANCELED' | 'NO_SHOW';
 
 export type CoachStatus = 'APPROVED' | 'PENDING' | 'DENIED';
@@ -48,7 +50,8 @@ export interface WhatsappConfig {
 
 export interface Subscription {
   status: SubscriptionStatus;
-  priceUsd: number; // precio mensual estándar (34.99)
+  plan: PlanId; // plan contratado (inicio / pro / premium)
+  priceUsd: number; // precio mensual del plan contratado
   promoPriceUsd: number; // precio de la promo de lanzamiento (1)
   trialDays: number; // días de prueba de la promo (14)
   isPromo: boolean; // registrado dentro de la ventana de lanzamiento (3 meses)

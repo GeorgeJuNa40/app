@@ -17,12 +17,14 @@ import type {
   Package,
   Payment,
   PaymentMethod,
+  PlanId,
   Reward,
   Studio,
   User,
   WhatsappConfig,
   WhatsappTemplate,
 } from './types';
+import { getPlan } from './plans';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import {
@@ -126,6 +128,7 @@ interface StoreValue {
   removeKnowledge: (index: number) => void;
   // Suscripción SaaS
   activatePromo: () => void;
+  subscribeToPlan: (plan: PlanId) => void;
   markSubscriptionPaid: () => void;
   setSubscriptionPastDue: () => void;
 }
@@ -585,7 +588,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }));
     },
 
-    // Promo de lanzamiento: paga $1 y activa 14 días de prueba.
+    // Promo de lanzamiento: paga $1 y activa 14 días de prueba con el plan Pro.
     activatePromo() {
       patchStudio((s) => {
         const end = new Date();
@@ -595,8 +598,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           subscription: {
             ...s.subscription,
             status: 'TRIALING',
+            plan: 'pro', // durante la prueba se habilita el plan Pro completo
+            priceUsd: getPlan('pro').priceUsd,
             isPromo: true,
             trialEndsAt: end.toISOString(),
+            currentPeriodEnd: end.toISOString(),
+          },
+        };
+      });
+    },
+    // El estudio elige un plan y queda activo por 30 días.
+    subscribeToPlan(plan) {
+      patchStudio((s) => {
+        const end = new Date();
+        end.setDate(end.getDate() + 30);
+        return {
+          ...s,
+          subscription: {
+            ...s.subscription,
+            status: 'ACTIVE',
+            plan,
+            priceUsd: getPlan(plan).priceUsd,
             currentPeriodEnd: end.toISOString(),
           },
         };

@@ -31,7 +31,21 @@ export default function AdminDashboard() {
         subtitle="Resumen general de tu estudio"
       />
 
-      {daysLeft <= 7 && (
+      {!subActive && (
+        <Card className="mb-6 p-4 border-red-200 bg-red-50">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-sm text-red-800">
+              🔒 Tu suscripción no está activa. Puedes ver este panel, pero el resto de las secciones
+              están bloqueadas. Elige un plan para desbloquear todo tu estudio.
+            </p>
+            <Link to="/admin/subscription">
+              <Button>Ver planes</Button>
+            </Link>
+          </div>
+        </Card>
+      )}
+
+      {subActive && daysLeft <= 7 && (
         <Card className="mb-6 p-4 border-amber-200 bg-amber-50">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <p className="text-sm text-amber-800">

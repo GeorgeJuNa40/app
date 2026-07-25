@@ -23,10 +23,10 @@ export default function SubscriptionGate({
         <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-amber-100 text-2xl">
           🔒
         </div>
-        <h2 className="text-xl font-bold text-ink">Panel bloqueado</h2>
+        <h2 className="text-xl font-bold text-ink">Sección bloqueada</h2>
         <p className="mt-2 text-ink-soft">
-          Tu suscripción mensual ($34 USD) no está vigente. Regulariza tu pago para recuperar
-          el acceso completo a la gestión de tu estudio.
+          Tu suscripción no está vigente. Puedes ver tu panel principal, pero para acceder a esta
+          sección elige un plan y registra tu pago.
         </p>
         <Link to="/admin/subscription" className="mt-6 inline-block">
           <Button>Ir a Suscripción</Button>

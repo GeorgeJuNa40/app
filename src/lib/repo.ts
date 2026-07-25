@@ -31,7 +31,8 @@ const DEFAULT_BRANDING = {
 const DEFAULT_WHATSAPP = { number: '', botEnabled: false, templates: [], knowledge: [] };
 const DEFAULT_SUBSCRIPTION = {
   status: 'TRIALING',
-  priceUsd: 34.99,
+  plan: 'pro',
+  priceUsd: 39.99,
   promoPriceUsd: 1,
   trialDays: 14,
   isPromo: true,
