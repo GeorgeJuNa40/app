@@ -6,7 +6,7 @@ import { useStore } from '../../lib/store';
 
 // Alumno: reserva de clases con disponibilidad en tiempo real ("Quedan X lugares").
 export default function BookClasses() {
-  const { db, currentUser, currentStudio, bookSession, cancelBooking } = useStore();
+  const { db, currentUser, currentStudio, bookSession, cancelBooking, availableCredits } = useStore();
   const uid = currentUser!.id;
 
   const myActiveBookings = useMemo(
@@ -19,13 +19,8 @@ export default function BookClasses() {
     [db.bookings, uid],
   );
 
-  // Suma los créditos disponibles de TODOS los paquetes activos del alumno.
-  const activePkgs = db.userPackages.filter((p) => p.userId === uid && p.active);
-  const creditsLeft = activePkgs.reduce(
-    (total, p) => total + Math.max(0, p.creditsTotal - p.creditsUsed),
-    0,
-  );
-  const hasPackage = activePkgs.length > 0;
+  // Créditos usables (activos, con vigencia) — mismo cálculo en toda la app.
+  const creditsLeft = availableCredits(uid);
 
   return (
     <>
@@ -38,9 +33,8 @@ export default function BookClasses() {
         <Card className="mb-6 p-4 bg-amber-50 border-amber-200">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <p className="text-sm text-amber-800">
-              {hasPackage
-                ? 'Ya usaste todas tus clases. Compra otro paquete para seguir reservando.'
-                : 'No tienes clases disponibles. Compra un paquete para reservar.'}
+              No tienes clases disponibles. Revisa la vigencia de tu paquete o compra uno nuevo para
+              seguir reservando.
             </p>
             <Link to="/app/packages">
               <Button variant="secondary">Ver paquetes</Button>
