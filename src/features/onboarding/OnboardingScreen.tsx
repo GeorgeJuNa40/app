@@ -29,6 +29,16 @@ export default function OnboardingScreen() {
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Al cambiar de modo limpiamos la contraseña (y datos sensibles) para que los
+  // campos no arrastren lo tecleado antes. El navegador seguirá ofreciendo tus
+  // credenciales guardadas al hacer clic en el modo "iniciar sesión".
+  const changeMode = (m: Mode) => {
+    setError('');
+    setPassword('');
+    setPhone('');
+    setMode(m);
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -119,7 +129,16 @@ export default function OnboardingScreen() {
                 {isCoachInvite ? ' como coach.' : '.'} Solo completa tus datos.
               </div>
             )}
-            <Input label="Correo" type="email" value={email} onChange={setEmail} placeholder="tu@correo.com" required />
+            <Input
+              label="Correo"
+              type="email"
+              value={email}
+              onChange={setEmail}
+              placeholder="tu@correo.com"
+              required
+              name="email"
+              autoComplete={mode === 'login' ? 'username' : 'off'}
+            />
             {mode !== 'login' && (
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-ink-soft">Teléfono (con código de país)</span>
@@ -158,6 +177,8 @@ export default function OnboardingScreen() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   required
+                  name="password"
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full rounded-xl border border-cream-dark bg-white px-4 py-3 pr-12 outline-none focus:ring-2 ring-brand"
@@ -187,16 +208,16 @@ export default function OnboardingScreen() {
           {/* Cambiar de modo */}
           <div className="mt-6 space-y-2 text-sm">
             {mode !== 'login' && (
-              <button onClick={() => switchTo('login', setMode, setError)} className="text-ink-faint hover:text-ink">
+              <button onClick={() => changeMode('login')} className="text-ink-faint hover:text-ink">
                 ¿Ya tienes cuenta? <span className="text-brand font-medium">Inicia sesión</span>
               </button>
             )}
             {mode === 'login' && (
               <>
-                <button onClick={() => switchTo('join', setMode, setError)} className="block text-ink-faint hover:text-ink">
+                <button onClick={() => changeMode('join')} className="block text-ink-faint hover:text-ink">
                   ¿Tienes un CEU? <span className="text-brand font-medium">Únete a tu estudio</span>
                 </button>
-                <button onClick={() => switchTo('create', setMode, setError)} className="block text-ink-faint hover:text-ink">
+                <button onClick={() => changeMode('create')} className="block text-ink-faint hover:text-ink">
                   ¿Eres un estudio nuevo? <span className="text-brand font-medium">Crea tu cuenta</span>
                 </button>
               </>
@@ -213,11 +234,6 @@ export default function OnboardingScreen() {
   );
 }
 
-function switchTo(m: Mode, setMode: (m: Mode) => void, setError: (s: string) => void) {
-  setError('');
-  setMode(m);
-}
-
 function Input({
   label,
   value,
@@ -225,6 +241,8 @@ function Input({
   placeholder,
   type = 'text',
   required,
+  name,
+  autoComplete,
 }: {
   label: string;
   value: string;
@@ -232,6 +250,8 @@ function Input({
   placeholder?: string;
   type?: string;
   required?: boolean;
+  name?: string;
+  autoComplete?: string;
 }) {
   return (
     <label className="block">
@@ -240,6 +260,8 @@ function Input({
         type={type}
         value={value}
         required={required}
+        name={name}
+        autoComplete={autoComplete}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className="w-full rounded-xl border border-cream-dark bg-white px-4 py-3 outline-none focus:ring-2 ring-brand"
