@@ -2,12 +2,23 @@
 // para no depender de la consola del navegador. Evita spam (máx. uno cada 3s).
 let lastShown = 0;
 
+// Handler opcional que re-sincroniza el estado local con el servidor tras un
+// fallo de escritura (lo registra el StoreProvider). Así, si un guardado falla,
+// la interfaz vuelve a reflejar la verdad de la base en vez de quedar desfasada.
+let resyncHandler: (() => void) | null = null;
+export function setResyncHandler(fn: (() => void) | null) {
+  resyncHandler = fn;
+}
+
 export function notifyError(context: string, message: string) {
   console.error(`${context}:`, message);
   if (typeof document === 'undefined') return;
   const now = Date.now();
   if (now - lastShown < 3000) return;
   lastShown = now;
+
+  // Re-sincroniza con el servidor (throttled junto con el aviso).
+  resyncHandler?.();
 
   const el = document.createElement('div');
   el.textContent = `⚠️ No se pudo guardar (${context}): ${message}`;

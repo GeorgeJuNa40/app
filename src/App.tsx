@@ -1,36 +1,49 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useStore } from './lib/store';
 import { isSupabaseConfigured } from './lib/supabase';
 import type { Role } from './lib/types';
 import AppShell from './components/layout/AppShell';
-
-import OnboardingScreen from './features/onboarding/OnboardingScreen';
-
-import AdminDashboard from './features/admin/AdminDashboard';
-import MembersCRM from './features/admin/MembersCRM';
-import CalendarAdmin from './features/admin/CalendarAdmin';
-import ClassesManagement from './features/admin/ClassesManagement';
-import PackageManagement from './features/admin/PackageManagement';
-import CoachesAdmin from './features/admin/CoachesAdmin';
-import RewardsAdmin from './features/admin/RewardsAdmin';
-import ServicesConfig from './features/admin/ServicesConfig';
-import WhatsappAgent from './features/admin/WhatsappAgent';
-import Reports from './features/admin/Reports';
-import SubscriptionScreen from './features/admin/SubscriptionScreen';
-import Settings from './features/admin/Settings';
+// Los "gates" (verificaciones de pago/estado) son ligeros y se cargan de una vez.
 import SubscriptionGate from './features/admin/SubscriptionGate';
-
-import CoachDashboard from './features/coach/CoachDashboard';
-import CoachCalendar from './features/coach/CoachCalendar';
-import CoachProfile from './features/coach/CoachProfile';
 import CoachGate from './features/coach/CoachGate';
 
-import StudentDashboard from './features/student/StudentDashboard';
-import BookClasses from './features/student/BookClasses';
-import MyPackages from './features/student/MyPackages';
-import Rewards from './features/student/Rewards';
-import OptionalServices from './features/student/OptionalServices';
-import StudentCoaches from './features/student/StudentCoaches';
+// Cada pantalla se carga bajo demanda (code-splitting) para aligerar la carga
+// inicial: el navegador solo descarga el código de la sección que se abre.
+const OnboardingScreen = lazy(() => import('./features/onboarding/OnboardingScreen'));
+
+const AdminDashboard = lazy(() => import('./features/admin/AdminDashboard'));
+const MembersCRM = lazy(() => import('./features/admin/MembersCRM'));
+const CalendarAdmin = lazy(() => import('./features/admin/CalendarAdmin'));
+const ClassesManagement = lazy(() => import('./features/admin/ClassesManagement'));
+const PackageManagement = lazy(() => import('./features/admin/PackageManagement'));
+const CoachesAdmin = lazy(() => import('./features/admin/CoachesAdmin'));
+const RewardsAdmin = lazy(() => import('./features/admin/RewardsAdmin'));
+const ServicesConfig = lazy(() => import('./features/admin/ServicesConfig'));
+const WhatsappAgent = lazy(() => import('./features/admin/WhatsappAgent'));
+const Reports = lazy(() => import('./features/admin/Reports'));
+const SubscriptionScreen = lazy(() => import('./features/admin/SubscriptionScreen'));
+const Settings = lazy(() => import('./features/admin/Settings'));
+
+const CoachDashboard = lazy(() => import('./features/coach/CoachDashboard'));
+const CoachCalendar = lazy(() => import('./features/coach/CoachCalendar'));
+const CoachProfile = lazy(() => import('./features/coach/CoachProfile'));
+
+const StudentDashboard = lazy(() => import('./features/student/StudentDashboard'));
+const BookClasses = lazy(() => import('./features/student/BookClasses'));
+const MyPackages = lazy(() => import('./features/student/MyPackages'));
+const Rewards = lazy(() => import('./features/student/Rewards'));
+const OptionalServices = lazy(() => import('./features/student/OptionalServices'));
+const StudentCoaches = lazy(() => import('./features/student/StudentCoaches'));
+
+// Pantalla de carga mientras se descarga el código de una sección.
+function Splash() {
+  return (
+    <div className="min-h-screen grid place-items-center bg-cream">
+      <div className="text-2xl font-black text-brand animate-pulse">Move yA</div>
+    </div>
+  );
+}
 
 // Guarda de rol: redirige al onboarding si no hay sesión o el rol no coincide.
 function RequireRole({ role, children }: { role: Role; children: React.ReactNode }) {
@@ -70,14 +83,11 @@ export default function App() {
 
   // Mientras se verifica la sesión, muestra una pantalla de carga simple.
   if (authLoading) {
-    return (
-      <div className="min-h-screen grid place-items-center bg-cream">
-        <div className="text-2xl font-black text-brand animate-pulse">Move yA</div>
-      </div>
-    );
+    return <Splash />;
   }
 
   return (
+    <Suspense fallback={<Splash />}>
     <Routes>
       {/* Onboarding: pantalla de inicio con CEU. Si ya hay sesión, redirige. */}
       <Route
@@ -131,5 +141,6 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }
