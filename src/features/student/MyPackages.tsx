@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../../lib/store';
-import { PageHeader, Card, Badge, Button } from '../../components/ui';
+import { PageHeader, Card, Badge, Button, Modal } from '../../components/ui';
 import { usd, daysUntil } from '../../lib/format';
 import type { Package, PaymentMethod } from '../../lib/types';
 
@@ -23,8 +23,10 @@ export default function MyPackages() {
         <div className="grid gap-4 md:grid-cols-2 mb-8">
           {myPackages.map((up) => {
             const pkg = db.packages.find((p) => p.id === up.packageId)!;
-            const left = up.creditsTotal - up.creditsUsed;
-            const pct = (up.creditsUsed / up.creditsTotal) * 100;
+            const left = Math.max(0, up.creditsTotal - up.creditsUsed);
+            const pct = up.creditsTotal > 0
+              ? Math.min(100, Math.max(0, (up.creditsUsed / up.creditsTotal) * 100))
+              : 0;
             const expired = daysUntil(up.expiresAt) <= 0;
             return (
               <Card key={up.id} className="p-5">
@@ -85,9 +87,9 @@ function CheckoutModal({ pkg, onClose, onPaid }: { pkg: Package; onClose: () => 
   };
 
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-black/40 p-4" onClick={onClose}>
-      <Card className="w-full max-w-md p-6" >
-        <div onClick={(e) => e.stopPropagation()}>
+    <Modal onClose={onClose} className="w-full max-w-md">
+      <Card className="p-6">
+        <div>
           {done ? (
             <div className="text-center py-8">
               <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-green-100 text-2xl">✓</div>
@@ -133,6 +135,6 @@ function CheckoutModal({ pkg, onClose, onPaid }: { pkg: Package; onClose: () => 
         </div>
         <style>{`.input{width:100%;border:1px solid #E8E3D6;border-radius:.75rem;padding:.6rem .8rem;background:#fff;outline:none}.input:focus{box-shadow:0 0 0 2px var(--brand-primary)}`}</style>
       </Card>
-    </div>
+    </Modal>
   );
 }
