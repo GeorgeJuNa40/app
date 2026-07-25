@@ -27,7 +27,7 @@ import type {
 } from './types';
 import { getPlan } from './plans';
 import { setActiveCurrency } from './format';
-import { notifyError } from './notify';
+import { notifyError, setResyncHandler } from './notify';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import {
@@ -218,6 +218,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Moneda local del estudio: se aplica a los precios en toda la app.
   setActiveCurrency(currentStudio?.branding.currencyCode);
+
+  // Re-sincronización: si un guardado en la nube falla, volvemos a cargar los
+  // datos del servidor para que el estado local no quede desfasado (P3).
+  useEffect(() => {
+    if (!currentUserId) return;
+    setResyncHandler(() => {
+      loadDatabase()
+        .then((data) => setDb(data))
+        .catch(() => {});
+    });
+    return () => setResyncHandler(null);
+  }, [currentUserId]);
 
   // Hidratación desde el registro: el teléfono (con lada) y la moneda quedan en
   // los metadatos de la cuenta. La primera vez que se carga la sesión, los

@@ -99,7 +99,9 @@ export default function StudentDashboard() {
             <>
               {(() => {
                 const pkg = db.packages.find((p) => p.id === data.activePkg!.packageId)!;
-                const pct = (data.activePkg!.creditsUsed / data.activePkg!.creditsTotal) * 100;
+                const pct = data.activePkg!.creditsTotal > 0
+                  ? Math.min(100, Math.max(0, (data.activePkg!.creditsUsed / data.activePkg!.creditsTotal) * 100))
+                  : 0;
                 return (
                   <>
                     <p className="font-medium text-brand">{pkg.name}</p>

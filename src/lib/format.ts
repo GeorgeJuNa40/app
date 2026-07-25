@@ -17,8 +17,11 @@ let activeCurrency = 'USD';
 export function setActiveCurrency(code: string | undefined) {
   activeCurrency = code || 'USD';
 }
+// Símbolo por moneda (la mayoría de LATAM usa $; el euro y la libra difieren).
+const CURRENCY_SYMBOLS: Record<string, string> = { EUR: '€', GBP: '£' };
+const symbolFor = (code: string) => CURRENCY_SYMBOLS[code] ?? '$';
 export const money = (n: number, code: string = activeCurrency) =>
-  `$${n.toLocaleString('es-MX')} ${code}`;
+  `${symbolFor(code)}${n.toLocaleString('es-MX')} ${code}`;
 // Precio en la moneda local del estudio (antes siempre USD).
 export const usd = (n: number) => money(n);
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../../lib/store';
-import { PageHeader, Card, Badge, Button, EmptyState } from '../../components/ui';
+import { PageHeader, Card, Badge, Button, EmptyState, Modal } from '../../components/ui';
 import Avatar from '../../components/Avatar';
 import ImageUpload from '../../components/ImageUpload';
 import InviteCard from './InviteCard';
@@ -25,15 +25,23 @@ export default function CoachesAdmin() {
   const coaches = studioUsers('COACH');
   const [draft, setDraft] = useState<Draft | null>(null);
   const [showInvite, setShowInvite] = useState(false);
+  const [err, setErr] = useState('');
 
-  const editDraft = (c: User) => setDraft({
-    id: c.id, fullName: c.fullName, email: c.email, phone: c.phone,
-    bio: c.coachProfile?.bio ?? '', specialties: (c.coachProfile?.specialties ?? []).join(', '),
-    yearsExp: c.coachProfile?.yearsExp ?? 1, avatarUrl: c.avatarUrl,
-  });
+  const editDraft = (c: User) => {
+    setErr('');
+    setDraft({
+      id: c.id, fullName: c.fullName, email: c.email, phone: c.phone,
+      bio: c.coachProfile?.bio ?? '', specialties: (c.coachProfile?.specialties ?? []).join(', '),
+      yearsExp: c.coachProfile?.yearsExp ?? 1, avatarUrl: c.avatarUrl,
+    });
+  };
 
   const save = () => {
-    if (!draft || !draft.fullName.trim()) return;
+    if (!draft) return;
+    if (!draft.fullName.trim()) return setErr('Escribe el nombre del coach.');
+    if (draft.email.trim() && !/^\S+@\S+\.\S+$/.test(draft.email.trim())) {
+      return setErr('El correo no tiene un formato válido.');
+    }
     const existing = coaches.find((c) => c.id === draft.id);
     const coach: User = {
       id: draft.id,
@@ -114,8 +122,8 @@ export default function CoachesAdmin() {
       </div>
 
       {draft && (
-        <div className="fixed inset-0 z-40 grid place-items-center bg-black/40 p-4">
-          <Card className="w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+        <Modal onClose={() => setDraft(null)} className="w-full max-w-lg">
+          <Card className="p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold text-ink mb-4">Editar coach</h2>
             <div className="space-y-4">
               <div className="flex items-center gap-3">
@@ -126,19 +134,20 @@ export default function CoachesAdmin() {
               <Field label="Nombre completo"><input className="input" value={draft.fullName} onChange={(e) => setDraft({ ...draft, fullName: e.target.value })} /></Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Teléfono"><input className="input" value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} /></Field>
-                <Field label="Años de exp."><input type="number" className="input" value={draft.yearsExp} onChange={(e) => setDraft({ ...draft, yearsExp: +e.target.value })} /></Field>
+                <Field label="Años de exp."><input type="number" min="0" className="input" value={draft.yearsExp} onChange={(e) => setDraft({ ...draft, yearsExp: +e.target.value })} /></Field>
               </div>
               <Field label="Correo"><input className="input" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} /></Field>
               <Field label="Especialidades (separadas por coma)"><input className="input" value={draft.specialties} onChange={(e) => setDraft({ ...draft, specialties: e.target.value })} /></Field>
               <Field label="Biografía"><textarea rows={3} className="input" value={draft.bio} onChange={(e) => setDraft({ ...draft, bio: e.target.value })} /></Field>
             </div>
+            {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
             <div className="mt-6 flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setDraft(null)}>Cancelar</Button>
               <Button onClick={save}>Guardar</Button>
             </div>
             <style>{`.input{width:100%;border:1px solid #E8E3D6;border-radius:.75rem;padding:.6rem .8rem;background:#fff;outline:none}.input:focus{box-shadow:0 0 0 2px var(--brand-primary)}`}</style>
           </Card>
-        </div>
+        </Modal>
       )}
     </>
   );

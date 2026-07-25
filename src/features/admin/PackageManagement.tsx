@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../../lib/store';
-import { PageHeader, Card, Badge, Button } from '../../components/ui';
+import { PageHeader, Card, Badge, Button, Modal } from '../../components/ui';
 import { usd } from '../../lib/format';
 import type { Package } from '../../lib/types';
 
@@ -32,7 +32,14 @@ export default function PackageManagement() {
 
   const save = () => {
     if (!draft || !draft.name.trim()) return;
-    upsertPackage(draft);
+    // Validación: precio no negativo, al menos 1 clase y 1 día de vigencia.
+    const clean: Package = {
+      ...draft,
+      priceUsd: Math.max(0, draft.priceUsd || 0),
+      classCredits: Math.max(1, Math.floor(draft.classCredits || 1)),
+      validityDays: Math.max(1, Math.floor(draft.validityDays || 1)),
+    };
+    upsertPackage(clean);
     setDraft(null);
   };
 
@@ -100,8 +107,8 @@ export default function PackageManagement() {
 
       {/* Editor modal */}
       {draft && (
-        <div className="fixed inset-0 z-40 grid place-items-center bg-black/40 p-4">
-          <Card className="w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+        <Modal onClose={() => setDraft(null)} className="w-full max-w-lg">
+          <Card className="p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold text-ink mb-4">
               {draft.id === 'new' ? 'Nuevo paquete' : 'Editar paquete'}
             </h2>
@@ -125,6 +132,8 @@ export default function PackageManagement() {
                 <Field label={`Precio (${currency})`}>
                   <input
                     type="number"
+                    min="0"
+                    step="0.01"
                     className="input"
                     value={draft.priceUsd}
                     onChange={(e) => setDraft({ ...draft, priceUsd: +e.target.value })}
@@ -133,6 +142,7 @@ export default function PackageManagement() {
                 <Field label="Clases">
                   <input
                     type="number"
+                    min="1"
                     className="input"
                     value={draft.classCredits}
                     onChange={(e) => setDraft({ ...draft, classCredits: +e.target.value })}
@@ -141,6 +151,7 @@ export default function PackageManagement() {
                 <Field label="Vigencia (días)">
                   <input
                     type="number"
+                    min="1"
                     className="input"
                     value={draft.validityDays}
                     onChange={(e) => setDraft({ ...draft, validityDays: +e.target.value })}
@@ -175,7 +186,7 @@ export default function PackageManagement() {
               <Button onClick={save}>Guardar</Button>
             </div>
           </Card>
-        </div>
+        </Modal>
       )}
 
       <style>{`

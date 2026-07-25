@@ -1,8 +1,41 @@
+import { useEffect } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 // ---------------------------------------------------------------------------
 // Primitivas UI compartidas — estilo "Zen Balance" (minimalista, wellness).
 // ---------------------------------------------------------------------------
+
+// Modal accesible: cierra con Esc o al hacer clic fuera; marca role="dialog".
+export function Modal({
+  onClose,
+  children,
+  className = 'w-full max-w-lg',
+}: {
+  onClose: () => void;
+  children: ReactNode;
+  className?: string;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-40 grid place-items-center bg-black/40 p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className={className} onClick={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export function Button({
   children,

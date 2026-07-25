@@ -45,25 +45,31 @@ export default function CoachDashboard() {
             Ver calendario →
           </Link>
         </div>
-        <div className="divide-y divide-cream-dark">
-          {upcoming.slice(0, 6).map((s) => {
-            const tpl = db.classTemplates.find((t) => t.id === s.templateId)!;
-            const enrolled = s.capacity - seatsLeft(s.id);
-            return (
-              <div key={s.id} className="flex items-center justify-between py-3">
-                <div>
-                  <p className="font-medium text-ink">{tpl.name}</p>
-                  <p className="text-sm text-ink-faint">
-                    {fmtDay(s.startsAt)} · {fmtTime(s.startsAt)}
-                  </p>
+        {upcoming.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-cream-dark p-8 text-center text-sm text-ink-faint">
+            No tienes clases próximas asignadas. Cuando el estudio te agende una clase, aparecerá aquí.
+          </div>
+        ) : (
+          <div className="divide-y divide-cream-dark">
+            {upcoming.slice(0, 6).map((s) => {
+              const tpl = db.classTemplates.find((t) => t.id === s.templateId)!;
+              const enrolled = s.capacity - seatsLeft(s.id);
+              return (
+                <div key={s.id} className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="font-medium text-ink">{tpl.name}</p>
+                    <p className="text-sm text-ink-faint">
+                      {fmtDay(s.startsAt)} · {fmtTime(s.startsAt)}
+                    </p>
+                  </div>
+                  <Badge tone={enrolled >= s.capacity ? 'danger' : 'success'}>
+                    {enrolled}/{s.capacity} alumnos
+                  </Badge>
                 </div>
-                <Badge tone={enrolled >= s.capacity ? 'danger' : 'success'}>
-                  {enrolled}/{s.capacity} alumnos
-                </Badge>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
     </>
   );
