@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useStore } from '../../lib/store';
+import { COUNTRIES, DEFAULT_COUNTRY_ISO, getCountry } from '../../lib/countries';
 
 type Mode = 'login' | 'join' | 'create';
 
@@ -21,6 +22,8 @@ export default function OnboardingScreen() {
   const [ceu, setCeu] = useState(invitedCeu);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [countryIso, setCountryIso] = useState(DEFAULT_COUNTRY_ISO);
+  const [phone, setPhone] = useState('');
 
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -33,12 +36,24 @@ export default function OnboardingScreen() {
     try {
       if (mode === 'login') {
         await signIn(email, password);
-      } else if (mode === 'create') {
-        if (!studioName.trim()) throw new Error('Escribe el nombre de tu estudio.');
-        await signUp({ fullName, email, password, studioName });
       } else {
-        if (!ceu.trim()) throw new Error('Escribe el Código de Estudio (CEU).');
-        await signUp({ fullName, email, password, ceuCode: ceu, role: isCoachInvite ? 'COACH' : 'STUDENT' });
+        const country = getCountry(countryIso);
+        const fullPhone = phone.trim() ? `${country.dial} ${phone.trim()}` : '';
+        const contact = { phone: fullPhone, country: country.iso, currency: country.currency };
+        if (mode === 'create') {
+          if (!studioName.trim()) throw new Error('Escribe el nombre de tu estudio.');
+          await signUp({ fullName, email, password, studioName, ...contact });
+        } else {
+          if (!ceu.trim()) throw new Error('Escribe el Código de Estudio (CEU).');
+          await signUp({
+            fullName,
+            email,
+            password,
+            ceuCode: ceu,
+            role: isCoachInvite ? 'COACH' : 'STUDENT',
+            ...contact,
+          });
+        }
       }
       // Al haber sesión, App.tsx redirige automáticamente al panel según el rol.
     } catch (err) {
@@ -105,6 +120,37 @@ export default function OnboardingScreen() {
               </div>
             )}
             <Input label="Correo" type="email" value={email} onChange={setEmail} placeholder="tu@correo.com" required />
+            {mode !== 'login' && (
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-ink-soft">Teléfono (con código de país)</span>
+                <div className="flex gap-2">
+                  <select
+                    value={countryIso}
+                    onChange={(e) => setCountryIso(e.target.value)}
+                    className="rounded-xl border border-cream-dark bg-white px-2 py-3 outline-none focus:ring-2 ring-brand"
+                    aria-label="País"
+                  >
+                    {COUNTRIES.map((c) => (
+                      <option key={c.iso} value={c.iso}>
+                        {c.flag} {c.dial}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="55 1234 5678"
+                    className="w-full rounded-xl border border-cream-dark bg-white px-4 py-3 outline-none focus:ring-2 ring-brand"
+                  />
+                </div>
+                {mode === 'create' && (
+                  <span className="mt-1 block text-xs text-ink-faint">
+                    Definimos la moneda de tu estudio según tu país: {getCountry(countryIso).currency}.
+                  </span>
+                )}
+              </label>
+            )}
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-ink-soft">Contraseña</span>
               <div className="relative">

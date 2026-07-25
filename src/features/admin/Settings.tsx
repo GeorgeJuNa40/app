@@ -3,6 +3,7 @@ import { PageHeader, Card } from '../../components/ui';
 import ImageUpload from '../../components/ImageUpload';
 import StudioLogo from '../../components/StudioLogo';
 import InviteCard from './InviteCard';
+import { CURRENCIES } from '../../lib/countries';
 
 // Configuración: datos del negocio, fotos y White-label (branding).
 export default function Settings() {
@@ -49,6 +50,17 @@ export default function Settings() {
           </div>
           <Field label="Dirección">
             <input className="input" value={s.address} onChange={(e) => updateStudio({ address: e.target.value })} />
+          </Field>
+          <Field label="Moneda (se aplica a los precios de tus paquetes)">
+            <select
+              className="input"
+              value={b.currencyCode ?? 'USD'}
+              onChange={(e) => updateBranding({ currencyCode: e.target.value })}
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </Field>
         </Card>
 

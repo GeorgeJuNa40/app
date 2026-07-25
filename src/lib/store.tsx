@@ -25,6 +25,7 @@ import type {
   WhatsappTemplate,
 } from './types';
 import { getPlan } from './plans';
+import { setActiveCurrency } from './format';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import {
@@ -55,6 +56,9 @@ export interface SignUpInput {
   ceuCode?: string; // para unirse a un estudio existente
   studioName?: string; // para crear un estudio nuevo (ADMIN)
   role?: 'COACH' | 'STUDENT'; // rol al unirse por CEU (por defecto STUDENT)
+  phone?: string; // teléfono con lada (ej. +52 55 1234 5678)
+  country?: string; // ISO del país (ej. MX)
+  currency?: string; // moneda local derivada del país (ej. MXN)
 }
 
 function daysUntil(iso: string): number {
@@ -209,6 +213,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     void persistStudio(next);
   };
 
+  // Moneda local del estudio: se aplica a los precios en toda la app.
+  setActiveCurrency(currentStudio?.branding.currencyCode);
+
+  // Hidratación desde el registro: el teléfono (con lada) y la moneda quedan en
+  // los metadatos de la cuenta. La primera vez que se carga la sesión, los
+  // guardamos en la base (teléfono del usuario, moneda del estudio si es admin).
+  useEffect(() => {
+    const meta = session?.user?.user_metadata as
+      | { phone?: string; country?: string; currency?: string }
+      | undefined;
+    if (!meta || !currentUser) return;
+
+    if (meta.phone && !currentUser.phone) {
+      const phone = String(meta.phone);
+      setDb((prev) => ({
+        ...prev,
+        users: prev.users.map((u) => (u.id === currentUser.id ? { ...u, phone } : u)),
+      }));
+      void dbUpdate('users', currentUser.id, { phone });
+    }
+
+    if (
+      currentUser.role === 'STUDIO_ADMIN' &&
+      currentStudio &&
+      meta.currency &&
+      !currentStudio.branding.currencyCode
+    ) {
+      patchStudio((s) => ({
+        ...s,
+        branding: { ...s.branding, currencyCode: meta.currency, country: meta.country },
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id, currentStudio?.id, session]);
+
   const value: StoreValue = {
     db,
     currentUser,
@@ -225,6 +264,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             ...(input.ceuCode ? { ceu_code: input.ceuCode.trim() } : {}),
             ...(input.studioName ? { studio_name: input.studioName.trim() } : {}),
             ...(input.role ? { signup_role: input.role } : {}),
+            ...(input.phone ? { phone: input.phone.trim() } : {}),
+            ...(input.country ? { country: input.country } : {}),
+            ...(input.currency ? { currency: input.currency } : {}),
           },
         },
       });

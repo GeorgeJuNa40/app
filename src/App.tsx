@@ -29,6 +29,7 @@ import BookClasses from './features/student/BookClasses';
 import MyPackages from './features/student/MyPackages';
 import Rewards from './features/student/Rewards';
 import OptionalServices from './features/student/OptionalServices';
+import StudentCoaches from './features/student/StudentCoaches';
 
 // Guarda de rol: redirige al onboarding si no hay sesión o el rol no coincide.
 function RequireRole({ role, children }: { role: Role; children: React.ReactNode }) {
@@ -124,6 +125,7 @@ export default function App() {
       <Route path="/app/book" element={<RequireRole role="STUDENT"><BookClasses /></RequireRole>} />
       <Route path="/app/packages" element={<RequireRole role="STUDENT"><MyPackages /></RequireRole>} />
       <Route path="/app/rewards" element={<RequireRole role="STUDENT"><Rewards /></RequireRole>} />
+      <Route path="/app/coaches" element={<RequireRole role="STUDENT"><StudentCoaches /></RequireRole>} />
       <Route path="/app/services" element={<RequireRole role="STUDENT"><OptionalServices /></RequireRole>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />

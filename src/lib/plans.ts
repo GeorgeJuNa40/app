@@ -24,7 +24,7 @@ export const PLANS: Plan[] = [
     tagline: 'Para estudios que están comenzando',
     features: [
       'Hasta 50 alumnos activos',
-      '1 coach',
+      'Hasta 3 coaches',
       'Calendario y reservas en línea',
       'Gestión de paquetes y pagos (CRM)',
       'Recordatorios de clase',
