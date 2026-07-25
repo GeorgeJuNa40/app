@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useStore } from '../../lib/store';
-import { PageHeader, Card, Badge, Button } from '../../components/ui';
+import { PageHeader, Card, Badge, Button, EmptyState } from '../../components/ui';
 import Avatar from '../../components/Avatar';
 import ImageUpload from '../../components/ImageUpload';
+import InviteCard from './InviteCard';
 import type { CoachStatus, User } from '../../lib/types';
 
 const STATUS_META: Record<CoachStatus, { label: string; tone: 'success' | 'warning' | 'danger' }> = {
@@ -23,8 +24,7 @@ export default function CoachesAdmin() {
   const { currentStudio, studioUsers, setCoachStatus, upsertCoach } = useStore();
   const coaches = studioUsers('COACH');
   const [draft, setDraft] = useState<Draft | null>(null);
-
-  const emptyDraft = (): Draft => ({ id: 'new', fullName: '', email: '', phone: '', bio: '', specialties: '', yearsExp: 1 });
+  const [showInvite, setShowInvite] = useState(false);
 
   const editDraft = (c: User) => setDraft({
     id: c.id, fullName: c.fullName, email: c.email, phone: c.phone,
@@ -61,8 +61,28 @@ export default function CoachesAdmin() {
       <PageHeader
         title="Coaches"
         subtitle="Aprueba, deniega o edita a tus instructores"
-        action={<Button onClick={() => setDraft(emptyDraft())}>+ Agregar coach</Button>}
+        action={
+          <Button onClick={() => setShowInvite((v) => !v)}>
+            {showInvite ? 'Ocultar invitación' : '+ Invitar coach'}
+          </Button>
+        }
       />
+
+      {showInvite && (
+        <div className="mb-2">
+          <InviteCard ceuCode={currentStudio!.ceuCode} />
+          <p className="mb-6 -mt-2 text-sm text-ink-faint">
+            Comparte el link o QR de <b>coaches</b> con tu instructor. Se registrará como pendiente y
+            aparecerá aquí para que lo apruebes.
+          </p>
+        </div>
+      )}
+
+      {coaches.length === 0 && !showInvite && (
+        <EmptyState>
+          Aún no tienes coaches. Usa <b>“+ Invitar coach”</b> para compartir el link de registro.
+        </EmptyState>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         {coaches.map((c) => {
@@ -96,7 +116,7 @@ export default function CoachesAdmin() {
       {draft && (
         <div className="fixed inset-0 z-40 grid place-items-center bg-black/40 p-4">
           <Card className="w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-ink mb-4">{draft.id === 'new' ? 'Nuevo coach' : 'Editar coach'}</h2>
+            <h2 className="text-lg font-bold text-ink mb-4">Editar coach</h2>
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Avatar url={draft.avatarUrl} initials={initials(draft.fullName || '?')} className="h-14 w-14 text-lg" />

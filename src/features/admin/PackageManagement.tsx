@@ -21,6 +21,7 @@ const emptyDraft = (studioId: string): Package => ({
 export default function PackageManagement() {
   const { db, currentStudio, upsertPackage, togglePackageActive } = useStore();
   const studioId = currentStudio!.id;
+  const currency = currentStudio!.branding.currencyCode ?? 'USD';
   const packages = db.packages.filter((p) => p.studioId === studioId);
   const templates = db.classTemplates.filter((t) => t.studioId === studioId);
 
@@ -121,7 +122,7 @@ export default function PackageManagement() {
                 />
               </Field>
               <div className="grid grid-cols-3 gap-3">
-                <Field label="Precio (USD)">
+                <Field label={`Precio (${currency})`}>
                   <input
                     type="number"
                     className="input"

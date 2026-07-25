@@ -23,6 +23,7 @@ import SubscriptionGate from './features/admin/SubscriptionGate';
 import CoachDashboard from './features/coach/CoachDashboard';
 import CoachCalendar from './features/coach/CoachCalendar';
 import CoachProfile from './features/coach/CoachProfile';
+import CoachGate from './features/coach/CoachGate';
 
 import StudentDashboard from './features/student/StudentDashboard';
 import BookClasses from './features/student/BookClasses';
@@ -115,10 +116,10 @@ export default function App() {
       <Route path="/admin/subscription" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate allow><SubscriptionScreen /></SubscriptionGate></RequireRole>} />
       <Route path="/admin/settings" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><Settings /></SubscriptionGate></RequireRole>} />
 
-      {/* ---- COACH ---- */}
-      <Route path="/coach" element={<RequireRole role="COACH"><CoachDashboard /></RequireRole>} />
-      <Route path="/coach/calendar" element={<RequireRole role="COACH"><CoachCalendar /></RequireRole>} />
-      <Route path="/coach/profile" element={<RequireRole role="COACH"><CoachProfile /></RequireRole>} />
+      {/* ---- COACH — protegido por estado de aprobación ---- */}
+      <Route path="/coach" element={<RequireRole role="COACH"><CoachGate><CoachDashboard /></CoachGate></RequireRole>} />
+      <Route path="/coach/calendar" element={<RequireRole role="COACH"><CoachGate><CoachCalendar /></CoachGate></RequireRole>} />
+      <Route path="/coach/profile" element={<RequireRole role="COACH"><CoachGate><CoachProfile /></CoachGate></RequireRole>} />
 
       {/* ---- USUARIO (Alumno) ---- */}
       <Route path="/app" element={<RequireRole role="STUDENT"><StudentDashboard /></RequireRole>} />

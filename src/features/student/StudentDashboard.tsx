@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useStore } from '../../lib/store';
+import { useStore, isUsablePackage } from '../../lib/store';
 import { PageHeader, StatCard, Card, Badge, Button } from '../../components/ui';
 import { fmtDay, fmtTime, daysUntil } from '../../lib/format';
 
 export default function StudentDashboard() {
-  const { db, currentUser, currentStudio, starBalance } = useStore();
+  const { db, currentUser, currentStudio, starBalance, availableCredits } = useStore();
   const uid = currentUser!.id;
   const photos = currentStudio!.photos;
 
@@ -16,10 +16,12 @@ export default function StudentDashboard() {
       .filter((x) => x.session && new Date(x.session.startsAt).getTime() > Date.now())
       .sort((a, b) => a.session.startsAt.localeCompare(b.session.startsAt));
 
-    const activePkg = db.userPackages.find((p) => p.userId === uid && p.active);
-    const creditsLeft = activePkg ? activePkg.creditsTotal - activePkg.creditsUsed : 0;
-    return { myBookings, activePkg, creditsLeft };
+    // Paquete a mostrar: uno usable (activo y vigente); si no hay, ninguno.
+    const activePkg = db.userPackages.find((p) => p.userId === uid && isUsablePackage(p)) ?? null;
+    return { myBookings, activePkg };
   }, [db, uid]);
+
+  const creditsLeft = availableCredits(uid);
 
   const stars = starBalance(uid);
 
@@ -39,8 +41,8 @@ export default function StudentDashboard() {
         />
         <StatCard
           label="Clases restantes"
-          value={data.creditsLeft}
-          hint={data.activePkg ? 'En tu paquete activo' : 'Sin paquete activo'}
+          value={creditsLeft}
+          hint={data.activePkg ? 'En tu paquete vigente' : 'Sin paquete vigente'}
           icon="❏"
         />
         <StatCard label="Próximas reservas" value={data.myBookings.length} icon="▦" />
@@ -105,7 +107,8 @@ export default function StudentDashboard() {
                       <div className="h-full bg-brand" style={{ width: `${pct}%` }} />
                     </div>
                     <p className="mt-2 text-sm text-ink-soft">
-                      {data.creditsLeft} de {data.activePkg!.creditsTotal} clases disponibles
+                      {Math.max(0, data.activePkg!.creditsTotal - data.activePkg!.creditsUsed)} de{' '}
+                      {data.activePkg!.creditsTotal} clases disponibles
                     </p>
                     <p className="text-xs text-ink-faint">
                       Vence en {daysUntil(data.activePkg!.expiresAt)} días
