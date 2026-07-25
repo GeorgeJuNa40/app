@@ -60,7 +60,7 @@ export default function AdminDashboard() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
-        <StatCard label="Alumnos activos" value={stats.students} icon="☇" />
+        <StatCard label="Alumnos activos" value={stats.students} icon="⚇" />
         <StatCard label="Reservas vigentes" value={stats.activeBookings} icon="▦" />
         <StatCard label="Ingresos (paquetes)" value={`$${stats.revenue}`} hint="USD acumulado" icon="◈" />
         <StatCard
@@ -104,7 +104,7 @@ export default function AdminDashboard() {
         <Card className="p-5">
           <h2 className="font-semibold text-ink mb-4">Accesos rápidos</h2>
           <div className="space-y-2">
-            <QuickLink to="/admin/members" label="Miembros (CRM)" icon="☇" />
+            <QuickLink to="/admin/members" label="Miembros (CRM)" icon="⚇" />
             <QuickLink to="/admin/packages" label="Gestionar paquetes" icon="❏" />
             <QuickLink to="/admin/whatsapp" label="WhatsApp IA" icon="✆" />
             <QuickLink to="/admin/rewards" label="Recompensas" icon="★" />
