@@ -31,7 +31,21 @@ export default function AdminDashboard() {
         subtitle="Resumen general de tu estudio"
       />
 
-      {daysLeft <= 7 && (
+      {!subActive && (
+        <Card className="mb-6 p-4 border-red-200 bg-red-50">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-sm text-red-800">
+              🔒 Tu suscripción no está activa. Puedes ver este panel, pero el resto de las secciones
+              están bloqueadas. Elige un plan para desbloquear todo tu estudio.
+            </p>
+            <Link to="/admin/subscription">
+              <Button>Ver planes</Button>
+            </Link>
+          </div>
+        </Card>
+      )}
+
+      {subActive && daysLeft <= 7 && (
         <Card className="mb-6 p-4 border-amber-200 bg-amber-50">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <p className="text-sm text-amber-800">
@@ -46,7 +60,7 @@ export default function AdminDashboard() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
-        <StatCard label="Alumnos activos" value={stats.students} icon="⚇" />
+        <StatCard label="Alumnos activos" value={stats.students} icon="☇" />
         <StatCard label="Reservas vigentes" value={stats.activeBookings} icon="▦" />
         <StatCard label="Ingresos (paquetes)" value={`$${stats.revenue}`} hint="USD acumulado" icon="◈" />
         <StatCard
@@ -90,7 +104,7 @@ export default function AdminDashboard() {
         <Card className="p-5">
           <h2 className="font-semibold text-ink mb-4">Accesos rápidos</h2>
           <div className="space-y-2">
-            <QuickLink to="/admin/members" label="Miembros (CRM)" icon="⚇" />
+            <QuickLink to="/admin/members" label="Miembros (CRM)" icon="☇" />
             <QuickLink to="/admin/packages" label="Gestionar paquetes" icon="❏" />
             <QuickLink to="/admin/whatsapp" label="WhatsApp IA" icon="✆" />
             <QuickLink to="/admin/rewards" label="Recompensas" icon="★" />
