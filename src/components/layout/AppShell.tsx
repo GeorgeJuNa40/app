@@ -37,6 +37,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { to: '/app', label: 'Inicio', icon: '◱' },
     { to: '/app/book', label: 'Reservar', icon: '▦' },
     { to: '/app/packages', label: 'Mis Paquetes', icon: '❏' },
+    { to: '/app/coaches', label: 'Coaches', icon: '⚐' },
     { to: '/app/rewards', label: 'Recompensas', icon: '★' },
     { to: '/app/services', label: 'Servicios', icon: '✚' },
   ],

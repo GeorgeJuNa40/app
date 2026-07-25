@@ -10,7 +10,17 @@ export const fmtFullDay = (iso: string) => FULL_DAY_FMT.format(new Date(iso));
 
 export const dayKey = (iso: string) => new Date(iso).toISOString().slice(0, 10);
 
-export const usd = (n: number) => `$${n} USD`;
+// Moneda activa del estudio (MXN, USD, EUR, …). La fija StoreProvider según el
+// estudio en sesión; por defecto USD. Así los precios se muestran en la moneda
+// local sin tener que tocar cada pantalla.
+let activeCurrency = 'USD';
+export function setActiveCurrency(code: string | undefined) {
+  activeCurrency = code || 'USD';
+}
+export const money = (n: number, code: string = activeCurrency) =>
+  `$${n.toLocaleString('es-MX')} ${code}`;
+// Precio en la moneda local del estudio (antes siempre USD).
+export const usd = (n: number) => money(n);
 
 export function daysUntil(iso: string): number {
   const ms = new Date(iso).getTime() - Date.now();
