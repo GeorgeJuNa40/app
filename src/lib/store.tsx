@@ -21,11 +21,13 @@ import type {
   Reward,
   Studio,
   User,
+  UserPackage,
   WhatsappConfig,
   WhatsappTemplate,
 } from './types';
 import { getPlan } from './plans';
 import { setActiveCurrency } from './format';
+import { notifyError } from './notify';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import {
@@ -87,6 +89,7 @@ interface StoreValue {
   studioUsers: (role: User['role']) => User[];
   starBalance: (userId: string) => number;
   membership: (userId: string) => MembershipInfo;
+  availableCredits: (userId: string) => number; // créditos usables (activos, con vigencia)
   // Alumno
   bookSession: (sessionId: string) => void;
   cancelBooking: (bookingId: string) => void;
@@ -248,6 +251,65 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id, currentStudio?.id, session]);
 
+  // Respaldo local de reserva (si la RPC book_session aún no está instalada).
+  // Valida cupo, créditos y vigencia del paquete en el cliente.
+  const legacyBookSession = (sessionId: string) => {
+    if (!currentUser) return;
+    const existing = db.bookings.find(
+      (b) => b.userId === currentUser.id && b.sessionId === sessionId,
+    );
+    if (existing && existing.status !== 'CANCELED') return; // ya está reservada
+    const s = db.classSessions.find((x) => x.id === sessionId);
+    if (!s) return;
+    const seats =
+      s.capacity -
+      db.bookings.filter((b) => b.sessionId === sessionId && b.status !== 'CANCELED').length;
+    if (seats <= 0) return;
+    // Paquete usable: activo, con créditos y dentro de su vigencia.
+    const activePkg = db.userPackages.find(
+      (p) => p.userId === currentUser.id && isUsablePackage(p),
+    );
+    if (!activePkg) return; // sin clases disponibles, no puede reservar
+
+    if (existing) {
+      setDb((prev) => ({
+        ...prev,
+        bookings: prev.bookings.map((b) =>
+          b.id === existing.id
+            ? { ...b, status: 'RESERVED', userPackageId: activePkg.id }
+            : b,
+        ),
+        userPackages: prev.userPackages.map((p) =>
+          p.id === activePkg.id ? { ...p, creditsUsed: p.creditsUsed + 1 } : p,
+        ),
+      }));
+      void dbUpdate('bookings', existing.id, {
+        status: 'RESERVED',
+        user_package_id: activePkg.id,
+      });
+      void dbUpdate('user_packages', activePkg.id, { credits_used: activePkg.creditsUsed + 1 });
+      return;
+    }
+
+    const booking: Booking = {
+      id: newId(),
+      userId: currentUser.id,
+      sessionId,
+      userPackageId: activePkg.id,
+      status: 'RESERVED',
+      createdAt: new Date().toISOString(),
+    };
+    setDb((prev) => ({
+      ...prev,
+      bookings: [...prev.bookings, booking],
+      userPackages: prev.userPackages.map((p) =>
+        p.id === activePkg.id ? { ...p, creditsUsed: p.creditsUsed + 1 } : p,
+      ),
+    }));
+    void dbInsert('bookings', rowBooking(booking));
+    void dbUpdate('user_packages', activePkg.id, { credits_used: activePkg.creditsUsed + 1 });
+  };
+
   const value: StoreValue = {
     db,
     currentUser,
@@ -312,68 +374,55 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       else state = 'active';
       return { state, planName: pkg?.name ?? null, creditsLeft, expiresAt: up.expiresAt, daysLeft };
     },
+    availableCredits(userId) {
+      return db.userPackages
+        .filter((p) => p.userId === userId && isUsablePackage(p))
+        .reduce((total, p) => total + Math.max(0, p.creditsTotal - p.creditsUsed), 0);
+    },
 
-    bookSession(sessionId) {
+    // Reserva una clase. Primero intenta la función transaccional del servidor
+    // (book_session), que valida cupo, créditos y vigencia de forma atómica y
+    // evita sobrecupo cuando dos alumnos reservan al mismo tiempo. Si esa función
+    // aún no está instalada en Supabase, usa el método local como respaldo.
+    async bookSession(sessionId) {
       if (!currentUser) return;
-      // Puede existir una reserva previa (incluso CANCELADA) para esta sesión.
-      const existing = db.bookings.find(
-        (b) => b.userId === currentUser.id && b.sessionId === sessionId,
-      );
-      if (existing && existing.status !== 'CANCELED') return; // ya está reservada
-      const s = db.classSessions.find((x) => x.id === sessionId);
-      if (!s) return;
-      const seats =
-        s.capacity -
-        db.bookings.filter((b) => b.sessionId === sessionId && b.status !== 'CANCELED').length;
-      if (seats <= 0) return;
-      // Debe tener un paquete activo con créditos disponibles (cualquiera de ellos).
-      const activePkg = db.userPackages.find(
-        (p) => p.userId === currentUser.id && p.active && p.creditsUsed < p.creditsTotal,
-      );
-      if (!activePkg) return; // sin clases disponibles, no puede reservar
-
-      if (existing) {
-        // Reactivar la reserva cancelada (evita chocar con la clave única user+sesión).
-        setDb((prev) => ({
-          ...prev,
-          bookings: prev.bookings.map((b) =>
-            b.id === existing.id
-              ? { ...b, status: 'RESERVED', userPackageId: activePkg?.id ?? null }
-              : b,
-          ),
-          userPackages: activePkg
-            ? prev.userPackages.map((p) =>
-                p.id === activePkg.id ? { ...p, creditsUsed: p.creditsUsed + 1 } : p,
-              )
-            : prev.userPackages,
-        }));
-        void dbUpdate('bookings', existing.id, {
-          status: 'RESERVED',
-          user_package_id: activePkg?.id ?? null,
-        });
-        if (activePkg) void dbUpdate('user_packages', activePkg.id, { credits_used: activePkg.creditsUsed + 1 });
+      const uid = currentUser.id;
+      const { data, error } = await supabase.rpc('book_session', { p_session_id: sessionId });
+      if (error) {
+        const msg = error.message || '';
+        if (error.code === 'PGRST202' || /Could not find the function/i.test(msg)) {
+          legacyBookSession(sessionId); // la RPC aún no existe: respaldo local
+          return;
+        }
+        notifyError('reservar', bookingErrorMessage(msg));
         return;
       }
-
-      const booking: Booking = {
-        id: newId(),
-        userId: currentUser.id,
-        sessionId,
-        userPackageId: activePkg?.id ?? null,
-        status: 'RESERVED',
-        createdAt: new Date().toISOString(),
-      };
-      setDb((prev) => ({
-        ...prev,
-        bookings: [...prev.bookings, booking],
-        userPackages: activePkg
-          ? prev.userPackages.map((p) =>
-              p.id === activePkg.id ? { ...p, creditsUsed: p.creditsUsed + 1 } : p,
-            )
-          : prev.userPackages,
-      }));
-      void dbInsert('bookings', rowBooking(booking));
-      if (activePkg) void dbUpdate('user_packages', activePkg.id, { credits_used: activePkg.creditsUsed + 1 });
+      const res = data as { booking_id: string; user_package_id: string } | null;
+      if (!res) return;
+      setDb((prev) => {
+        const exists = prev.bookings.some((b) => b.id === res.booking_id);
+        const nb: Booking = {
+          id: res.booking_id,
+          userId: uid,
+          sessionId,
+          userPackageId: res.user_package_id,
+          status: 'RESERVED',
+          createdAt: new Date().toISOString(),
+        };
+        return {
+          ...prev,
+          bookings: exists
+            ? prev.bookings.map((b) =>
+                b.id === res.booking_id
+                  ? { ...b, status: 'RESERVED', userPackageId: res.user_package_id }
+                  : b,
+              )
+            : [...prev.bookings, nb],
+          userPackages: prev.userPackages.map((p) =>
+            p.id === res.user_package_id ? { ...p, creditsUsed: p.creditsUsed + 1 } : p,
+          ),
+        };
+      });
     },
     cancelBooking(bookingId) {
       const booking = db.bookings.find((b) => b.id === bookingId);
@@ -737,6 +786,26 @@ export function isSubscriptionActive(studio: Studio | null): boolean {
   const { status, currentPeriodEnd } = studio.subscription;
   if (status === 'PAST_DUE' || status === 'CANCELED') return false;
   return new Date(currentPeriodEnd).getTime() > Date.now();
+}
+
+// Un paquete es "usable" para reservar si está activo, le quedan créditos y
+// aún está dentro de su vigencia (no vencido).
+export function isUsablePackage(p: UserPackage): boolean {
+  return (
+    p.active &&
+    p.creditsUsed < p.creditsTotal &&
+    new Date(p.expiresAt).getTime() > Date.now()
+  );
+}
+
+// Traduce los errores de la reserva (RPC book_session) a mensajes claros.
+function bookingErrorMessage(msg: string): string {
+  if (/FULL/.test(msg)) return 'La clase ya está llena.';
+  if (/NO_CREDITS/.test(msg))
+    return 'No tienes clases disponibles. Revisa la vigencia de tu paquete o compra uno nuevo.';
+  if (/ALREADY/.test(msg)) return 'Ya tienes esta clase reservada.';
+  if (/NOT_ALLOWED|NOT_FOUND/.test(msg)) return 'No se pudo reservar esta clase.';
+  return 'No se pudo completar la reserva. Inténtalo de nuevo.';
 }
 
 // Genera una respuesta simulada del bot con base en la retro/conocimiento.
