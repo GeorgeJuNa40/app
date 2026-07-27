@@ -14,20 +14,24 @@
 //
 // Esta función SÍ valida el JWT del usuario (déjala con "Enforce JWT" activado).
 // ============================================================================
-import Stripe from 'https://esm.sh/stripe@17.0.0?target=deno';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import Stripe from 'npm:stripe@17.0.0';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
+// httpClient de tipo fetch: obligatorio para que Stripe funcione en Supabase (Deno).
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
   apiVersion: '2024-06-20',
+  httpClient: Stripe.createFetchHttpClient(),
 });
 const APP_URL = (Deno.env.get('APP_URL') ?? '').replace(/\/$/, '');
 
 // Precios mensuales de los planes del estudio (en centavos de USD).
 const PLAN_PRICES: Record<string, number> = { inicio: 1999, pro: 3999, premium: 7999 };
 
+// Encabezados CORS: se permiten los que envía la librería de Supabase
+// (authorization, x-client-info, apikey, content-type).
 const cors = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
