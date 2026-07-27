@@ -1,7 +1,8 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useStore } from './lib/store';
 import { isSupabaseConfigured } from './lib/supabase';
+import { notifySuccess, triggerResync } from './lib/notify';
 import type { Role } from './lib/types';
 import AppShell from './components/layout/AppShell';
 // Los "gates" (verificaciones de pago/estado) son ligeros y se cargan de una vez.
@@ -63,6 +64,24 @@ function RequireRole({ role, children }: { role: Role; children: React.ReactNode
 
 export default function App() {
   const { currentUser, authLoading } = useStore();
+
+  // Al volver de Stripe (?pago=exito / ?suscripcion=exito): avisa y refresca los
+  // datos (el webhook ya creó el registro en el servidor).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pago = params.get('pago');
+    const susc = params.get('suscripcion');
+    if (!pago && !susc) return;
+    if (pago === 'exito') {
+      notifySuccess('¡Pago recibido! Tu paquete se activa en unos segundos.');
+      setTimeout(triggerResync, 3000);
+    } else if (susc === 'exito') {
+      notifySuccess('¡Suscripción activada! Bienvenido a tu plan.');
+      setTimeout(triggerResync, 3000);
+    }
+    // Limpia el query para que el aviso no se repita al recargar.
+    window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+  }, []);
 
   // Si faltan las llaves de conexión, avisa claramente (en vez de "Failed to fetch").
   if (!isSupabaseConfigured) {

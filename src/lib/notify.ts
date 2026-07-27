@@ -9,6 +9,10 @@ let resyncHandler: (() => void) | null = null;
 export function setResyncHandler(fn: (() => void) | null) {
   resyncHandler = fn;
 }
+// Fuerza una recarga de datos desde el servidor (p. ej. tras volver de un pago).
+export function triggerResync() {
+  resyncHandler?.();
+}
 
 export function notifyError(context: string, message: string) {
   console.error(`${context}:`, message);
@@ -29,4 +33,18 @@ export function notifyError(context: string, message: string) {
     'box-shadow:0 6px 20px rgba(0,0,0,.25)';
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 6000);
+}
+
+// Aviso de éxito (verde), p. ej. al regresar de un pago con Stripe.
+export function notifySuccess(message: string) {
+  if (typeof document === 'undefined') return;
+  const el = document.createElement('div');
+  el.textContent = `✅ ${message}`;
+  el.style.cssText =
+    'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);' +
+    'background:#15803d;color:#fff;padding:10px 16px;border-radius:12px;' +
+    'font:14px system-ui,sans-serif;z-index:9999;max-width:90%;text-align:center;' +
+    'box-shadow:0 6px 20px rgba(0,0,0,.25)';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 5000);
 }
