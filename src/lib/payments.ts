@@ -12,7 +12,19 @@ export async function startStripeCheckout(body: CheckoutBody): Promise<boolean> 
   try {
     const { data, error } = await supabase.functions.invoke('stripe-checkout', { body });
     if (error) {
-      notifyError('pago', 'No se pudo iniciar el pago. Inténtalo de nuevo.');
+      // Intenta leer el mensaje real que devolvió la función para mostrarlo.
+      let detail = error.message || 'Error desconocido';
+      try {
+        const ctx = (error as { context?: Response }).context;
+        if (ctx && typeof ctx.clone === 'function') {
+          const b = await ctx.clone().json();
+          if (b?.error) detail = String(b.error);
+        }
+      } catch {
+        /* si no hay cuerpo JSON, se queda el mensaje base */
+      }
+      console.error('stripe-checkout error:', error, detail);
+      notifyError('pago', detail);
       return false;
     }
     const url = (data as { url?: string } | null)?.url;
@@ -22,8 +34,9 @@ export async function startStripeCheckout(body: CheckoutBody): Promise<boolean> 
     }
     window.location.href = url; // redirige a la página segura de Stripe Checkout
     return true;
-  } catch {
-    notifyError('pago', 'No se pudo iniciar el pago. Inténtalo de nuevo.');
+  } catch (e) {
+    console.error('stripe-checkout exception:', e);
+    notifyError('pago', String((e as Error)?.message ?? e));
     return false;
   }
 }
