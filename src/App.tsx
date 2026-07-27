@@ -23,6 +23,7 @@ const RewardsAdmin = lazy(() => import('./features/admin/RewardsAdmin'));
 const ServicesConfig = lazy(() => import('./features/admin/ServicesConfig'));
 const WhatsappAgent = lazy(() => import('./features/admin/WhatsappAgent'));
 const Reports = lazy(() => import('./features/admin/Reports'));
+const Reminders = lazy(() => import('./features/admin/Reminders'));
 const SubscriptionScreen = lazy(() => import('./features/admin/SubscriptionScreen'));
 const Settings = lazy(() => import('./features/admin/Settings'));
 
@@ -141,6 +142,7 @@ export default function App() {
       <Route path="/admin/services" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><ServicesConfig /></SubscriptionGate></RequireRole>} />
       <Route path="/admin/whatsapp" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><WhatsappAgent /></SubscriptionGate></RequireRole>} />
       <Route path="/admin/reports" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><Reports /></SubscriptionGate></RequireRole>} />
+      <Route path="/admin/reminders" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><Reminders /></SubscriptionGate></RequireRole>} />
       {/* Suscripción siempre accesible (allow) para poder regularizar el pago. */}
       <Route path="/admin/subscription" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate allow><SubscriptionScreen /></SubscriptionGate></RequireRole>} />
       <Route path="/admin/settings" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><Settings /></SubscriptionGate></RequireRole>} />
