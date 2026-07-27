@@ -105,6 +105,22 @@ export default function Settings() {
           </div>
           <p className="mt-4 text-sm text-ink-faint">Los cambios se aplican de inmediato a toda la interfaz del estudio.</p>
         </Card>
+
+        {/* Política de cancelación (visible para el alumno) */}
+        <Card className="p-6 lg:col-span-2">
+          <h2 className="font-semibold text-ink">Política de cancelación</h2>
+          <p className="mt-1 mb-3 text-sm text-ink-faint">
+            Este texto se muestra a tus alumnos en la pantalla de <strong>Reservar</strong>. Explica
+            con cuánta anticipación pueden cancelar sin penalización.
+          </p>
+          <textarea
+            className="input"
+            rows={4}
+            value={b.cancellationPolicy ?? ''}
+            onChange={(e) => updateBranding({ cancellationPolicy: e.target.value })}
+            placeholder="Ej. Puedes cancelar tu reserva hasta 4 horas antes de la clase sin penalización. Después de ese tiempo, la clase se descuenta de tu paquete."
+          />
+        </Card>
       </div>
       <style>{`.input{width:100%;border:1px solid #E8E3D6;border-radius:.75rem;padding:.6rem .8rem;background:#fff;outline:none}.input:focus{box-shadow:0 0 0 2px var(--brand-primary)}`}</style>
     </>
