@@ -9,6 +9,10 @@
 --                                                     (el admin lo aprueba después).
 --   * Nombre de estudio (sin CEU)                  -> crea su ESTUDIO y es ADMIN.
 --
+-- También guarda el teléfono (con lada) de cada usuario y, para un estudio nuevo,
+-- su país y moneda local (derivados del registro), y siembra la suscripción con
+-- los valores actuales (plan Pro, $39.99, promo $1 · 14 días).
+--
 -- Cómo usarlo:
 --   1. Supabase -> "SQL Editor" -> "New query".
 --   2. Borra lo que haya, pega TODO este archivo y presiona "Run".
@@ -34,6 +38,9 @@ declare
   v_full_name   text  := coalesce(nullif(trim(meta->>'full_name'), ''),
                                   split_part(new.email, '@', 1));
   v_signup_role text  := upper(coalesce(nullif(trim(meta->>'signup_role'), ''), 'STUDENT'));
+  v_phone       text  := coalesce(nullif(trim(meta->>'phone'), ''), '');
+  v_country     text  := coalesce(nullif(trim(meta->>'country'), ''), '');
+  v_currency    text  := coalesce(nullif(trim(meta->>'currency'), ''), 'USD');
   v_studio_id   text;
   v_initials    text;
 begin
@@ -52,12 +59,12 @@ begin
 
     if v_signup_role = 'COACH' then
       -- COACH: entra como PENDIENTE; el admin lo aprueba en el panel de Coaches.
-      insert into public.users (id, studio_id, role, full_name, email, avatar_initials, coach_status)
-      values (new.id::text, v_studio_id, 'COACH', v_full_name, new.email, v_initials, 'PENDING');
+      insert into public.users (id, studio_id, role, full_name, email, phone, avatar_initials, coach_status)
+      values (new.id::text, v_studio_id, 'COACH', v_full_name, new.email, v_phone, v_initials, 'PENDING');
     else
       -- ALUMNO (por defecto)
-      insert into public.users (id, studio_id, role, full_name, email, avatar_initials)
-      values (new.id::text, v_studio_id, 'STUDENT', v_full_name, new.email, v_initials);
+      insert into public.users (id, studio_id, role, full_name, email, phone, avatar_initials)
+      values (new.id::text, v_studio_id, 'STUDENT', v_full_name, new.email, v_phone, v_initials);
     end if;
 
   elsif v_studio_name is not null then
@@ -66,32 +73,34 @@ begin
     -----------------------------------------------------------------
     v_studio_id := gen_random_uuid()::text;
 
-    insert into public.studios (id, name, ceu_code, email, branding, whatsapp, subscription)
+    insert into public.studios (id, name, ceu_code, phone, email, branding, whatsapp, subscription)
     values (
       v_studio_id,
       v_studio_name,
       -- CEU autogenerado y único: primeras letras del nombre + 4 al azar
       upper(regexp_replace(left(v_studio_name, 4), '[^a-zA-Z0-9]', '', 'g'))
         || '-' || upper(substr(md5(random()::text), 1, 4)),
+      v_phone,
       new.email,
       jsonb_build_object(
         'primaryColor', '#2D5A4C', 'secondaryColor', '#F4F1EA',
-        'accentColor', '#333333', 'fontFamily', 'Inter', 'logoText', v_studio_name
+        'accentColor', '#333333', 'fontFamily', 'Inter', 'logoText', v_studio_name,
+        'country', v_country, 'currencyCode', v_currency
       ),
       jsonb_build_object(
         'number', '', 'botEnabled', false,
         'templates', '[]'::jsonb, 'knowledge', '[]'::jsonb
       ),
       jsonb_build_object(
-        'status', 'TRIALING', 'priceUsd', 34.99, 'promoPriceUsd', 1,
+        'status', 'TRIALING', 'plan', 'pro', 'priceUsd', 39.99, 'promoPriceUsd', 1,
         'trialDays', 14, 'isPromo', true,
         'trialEndsAt', (now() + interval '14 days'),
         'currentPeriodEnd', (now() + interval '14 days')
       )
     );
 
-    insert into public.users (id, studio_id, role, full_name, email, avatar_initials)
-    values (new.id::text, v_studio_id, 'STUDIO_ADMIN', v_full_name, new.email, v_initials);
+    insert into public.users (id, studio_id, role, full_name, email, phone, avatar_initials)
+    values (new.id::text, v_studio_id, 'STUDIO_ADMIN', v_full_name, new.email, v_phone, v_initials);
 
   else
     -----------------------------------------------------------------
