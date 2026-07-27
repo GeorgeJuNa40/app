@@ -15,12 +15,16 @@
 // IMPORTANTE: despliega esta función con "Enforce JWT" DESACTIVADO (Stripe no
 // envía un JWT de usuario; la seguridad la da la firma del webhook).
 // ============================================================================
-import Stripe from 'https://esm.sh/stripe@17.0.0?target=deno';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import Stripe from 'npm:stripe@17.0.0';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
+// httpClient de tipo fetch: obligatorio para que Stripe funcione en Supabase (Deno).
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
   apiVersion: '2024-06-20',
+  httpClient: Stripe.createFetchHttpClient(),
 });
+// Proveedor de criptografía para verificar la firma del webhook en Deno.
+const cryptoProvider = Stripe.createSubtleCryptoProvider();
 const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') ?? '';
 
 // Cliente administrador (service role) — solo existe aquí, en el servidor.
@@ -37,7 +41,7 @@ Deno.serve(async (req) => {
 
   let event: Stripe.Event;
   try {
-    event = await stripe.webhooks.constructEventAsync(raw, sig, webhookSecret);
+    event = await stripe.webhooks.constructEventAsync(raw, sig, webhookSecret, undefined, cryptoProvider);
   } catch (e) {
     return new Response(`Firma inválida: ${(e as Error).message}`, { status: 400 });
   }
