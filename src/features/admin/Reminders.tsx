@@ -44,12 +44,12 @@ export default function Reminders() {
     if (state === 'expired') {
       const tpl = studio.whatsapp.templates.find((t) => t.id === 'wt_pay')?.text;
       if (tpl) return fill(tpl, { nombre, plan, fecha, estudio });
-      return `Hola ${nombre}, tu paquete ${plan} en ${estudio} ya venció${fecha ? ` (el ${fecha})` : ''}. Renúvalo en el estudio o desde la app para seguir reservando. ¡Te esperamos! 🌿`;
+      return `Hola ${nombre}, tu paquete ${plan} en ${estudio} ya venció${fecha ? ` (el ${fecha})` : ''}. Renuévalo en el estudio o desde la app para seguir reservando. ¡Te esperamos! 🌿`;
     }
     // expiring
     const tpl = studio.whatsapp.templates.find((t) => t.id === 'wt_pay')?.text;
     if (tpl) return fill(tpl, { nombre, plan, fecha, estudio });
-    return `Hola ${nombre}, te recordamos que tu paquete ${plan} en ${estudio} está por vencer${fecha ? ` (el ${fecha})` : ''}. Renúvalo para no perder tus clases. ¡Nos vemos! 🌿`;
+    return `Hola ${nombre}, te recordamos que tu paquete ${plan} en ${estudio} está por vencer${fecha ? ` (el ${fecha})` : ''}. Renuévalo para no perder tus clases. ¡Nos vemos! 🌿`;
   };
 
   const waLink = (phone: string, text: string) => {

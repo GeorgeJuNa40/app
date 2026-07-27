@@ -134,7 +134,6 @@ export default function App() {
       {/* Dashboard siempre visible: aunque no haya pago, el estudio puede entrar a su panel principal. */}
       <Route path="/admin" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate allow><AdminDashboard /></SubscriptionGate></RequireRole>} />
       <Route path="/admin/members" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><MembersCRM /></SubscriptionGate></RequireRole>} />
-      <Route path="/admin/reminders" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><Reminders /></SubscriptionGate></RequireRole>} />
       <Route path="/admin/calendar" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><CalendarAdmin /></SubscriptionGate></RequireRole>} />
       <Route path="/admin/classes" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><ClassesManagement /></SubscriptionGate></RequireRole>} />
       <Route path="/admin/packages" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><PackageManagement /></SubscriptionGate></RequireRole>} />
