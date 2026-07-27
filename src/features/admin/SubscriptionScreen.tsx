@@ -1,19 +1,28 @@
+import { useState } from 'react';
 import { useStore, isSubscriptionActive } from '../../lib/store';
 import { PageHeader, Card, Button, Badge } from '../../components/ui';
 import { daysUntil } from '../../lib/format';
 import { PLANS, PROMO_PRICE, PROMO_TRIAL_DAYS, getPlan } from '../../lib/plans';
+import { startStripeCheckout } from '../../lib/payments';
 import type { PlanId } from '../../lib/types';
 
 // Precio en USD con 2 decimales (los planes terminan en .99).
 const money = (n: number) => `$${n.toFixed(2)}`;
 
 // Suscripción SaaS: 3 planes (Inicio $19.99, Pro $39.99, Premium $79.99) con
-// promo de lanzamiento ($1 · 14 días con el plan Pro habilitado). Al terminar
-// la prueba, el estudio elige el plan que quiere mantener.
+// promo de lanzamiento ($1 · 14 días con el plan Pro habilitado). El cobro del
+// plan se hace en la página segura de Stripe.
 export default function SubscriptionScreen() {
-  const { currentStudio, activatePromo, subscribeToPlan, markSubscriptionPaid, setSubscriptionPastDue } =
-    useStore();
+  const { currentStudio, activatePromo, markSubscriptionPaid, setSubscriptionPastDue } = useStore();
+  const [busy, setBusy] = useState(false);
   const sub = currentStudio!.subscription;
+
+  // Elegir/cambiar plan → pago recurrente en Stripe.
+  const choosePlan = async (plan: PlanId) => {
+    setBusy(true);
+    const ok = await startStripeCheckout({ kind: 'subscription', plan });
+    if (!ok) setBusy(false); // si funciona, redirige a Stripe
+  };
 
   const trialEndsAt = sub.trialEndsAt ?? sub.currentPeriodEnd;
   const active = isSubscriptionActive(currentStudio);
@@ -127,9 +136,10 @@ export default function SubscriptionScreen() {
                   <Button
                     className="w-full"
                     variant={plan.highlight ? 'primary' : 'secondary'}
-                    onClick={() => subscribeToPlan(plan.id)}
+                    disabled={busy}
+                    onClick={() => choosePlan(plan.id)}
                   >
-                    {active ? 'Cambiar a este plan' : `Elegir ${plan.name}`}
+                    {busy ? 'Redirigiendo…' : active ? 'Cambiar a este plan' : `Elegir ${plan.name}`}
                   </Button>
                 )}
               </div>
@@ -168,8 +178,8 @@ export default function SubscriptionScreen() {
           </li>
         </ol>
         <p className="mt-4 text-sm text-ink-faint">
-          En producción esto se conecta a un proveedor de pagos (Stripe) con periodo de prueba; el
-          estado <code>TRIALING → ACTIVE</code> se actualiza vía webhooks al terminar la prueba.
+          🔒 El cobro del plan se procesa en la página segura de Stripe; tu suscripción se activa
+          automáticamente al confirmarse el pago.
         </p>
       </Card>
     </>
