@@ -17,6 +17,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   STUDIO_ADMIN: [
     { to: '/admin', label: 'Dashboard', icon: '◱' },
     { to: '/admin/members', label: 'Miembros (CRM)', icon: '⚇' },
+    { to: '/admin/reminders', label: 'Recordatorios', icon: '⏰' },
     { to: '/admin/calendar', label: 'Calendario', icon: '▦' },
     { to: '/admin/classes', label: 'Clases', icon: '◉' },
     { to: '/admin/packages', label: 'Paquetes', icon: '❏' },
