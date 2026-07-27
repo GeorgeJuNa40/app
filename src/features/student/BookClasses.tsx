@@ -22,12 +22,22 @@ export default function BookClasses() {
   // Créditos usables (activos, con vigencia) — mismo cálculo en toda la app.
   const creditsLeft = availableCredits(uid);
 
+  // Política de cancelación que definió el estudio (si la configuró).
+  const cancellationPolicy = currentStudio!.branding.cancellationPolicy?.trim();
+
   return (
     <>
       <PageHeader
         title="Reservar clases"
         subtitle="Elige tu próxima sesión — disponibilidad en tiempo real"
       />
+
+      {cancellationPolicy && (
+        <Card className="mb-6 p-4 bg-cream-dark/30">
+          <p className="text-sm font-semibold text-ink">Política de cancelación</p>
+          <p className="mt-1 text-sm text-ink-soft whitespace-pre-line">{cancellationPolicy}</p>
+        </Card>
+      )}
 
       {creditsLeft === 0 && (
         <Card className="mb-6 p-4 bg-amber-50 border-amber-200">

@@ -24,6 +24,7 @@ export interface Branding {
   heroPhotoUrl?: string;
   country?: string; // ISO del país del estudio (ej. MX), derivado del registro
   currencyCode?: string; // moneda local del estudio (ej. MXN); default USD
+  cancellationPolicy?: string; // política de cancelación (la ve el alumno)
 }
 
 // Servicio opcional editable por el estudio (Nutrición, Kinesiología, etc.).
