@@ -107,19 +107,41 @@ export default function Settings() {
         </Card>
 
         {/* Política de cancelación (visible para el alumno) */}
-        <Card className="p-6 lg:col-span-2">
-          <h2 className="font-semibold text-ink">Política de cancelación</h2>
-          <p className="mt-1 mb-3 text-sm text-ink-faint">
-            Este texto se muestra a tus alumnos en la pantalla de <strong>Reservar</strong>. Explica
-            con cuánta anticipación pueden cancelar sin penalización.
-          </p>
-          <textarea
-            className="input"
-            rows={4}
-            value={b.cancellationPolicy ?? ''}
-            onChange={(e) => updateBranding({ cancellationPolicy: e.target.value })}
-            placeholder="Ej. Puedes cancelar tu reserva hasta 4 horas antes de la clase sin penalización. Después de ese tiempo, la clase se descuenta de tu paquete."
-          />
+        <Card className="p-6 lg:col-span-2 space-y-4">
+          <div>
+            <h2 className="font-semibold text-ink">Política de cancelación</h2>
+            <p className="mt-1 mb-3 text-sm text-ink-faint">
+              Este texto se muestra a tus alumnos en la pantalla de <strong>Reservar</strong>. Explica
+              con cuánta anticipación pueden cancelar sin penalización.
+            </p>
+            <textarea
+              className="input"
+              rows={4}
+              value={b.cancellationPolicy ?? ''}
+              onChange={(e) => updateBranding({ cancellationPolicy: e.target.value })}
+              placeholder="Ej. Puedes cancelar tu reserva hasta 4 horas antes de la clase sin penalización. Después de ese tiempo, la clase se descuenta de tu paquete."
+            />
+          </div>
+
+          <div className="border-t border-cream-dark pt-4">
+            <Field label="Candado de cancelación — horas de anticipación">
+              <input
+                type="number"
+                min={0}
+                step={1}
+                className="input"
+                value={b.cancellationHours ?? 0}
+                onChange={(e) =>
+                  updateBranding({ cancellationHours: Math.max(0, Math.floor(Number(e.target.value) || 0)) })
+                }
+              />
+            </Field>
+            <p className="mt-1 text-xs text-ink-faint">
+              Si pones <strong>24</strong>, ningún alumno podrá cancelar una reserva cuando falten menos
+              de 24 horas para la clase: el botón de cancelar se bloquea automáticamente con un candado.
+              Usa <strong>0</strong> para permitir cancelar en cualquier momento.
+            </p>
+          </div>
         </Card>
       </div>
       <style>{`.input{width:100%;border:1px solid #E8E3D6;border-radius:.75rem;padding:.6rem .8rem;background:#fff;outline:none}.input:focus{box-shadow:0 0 0 2px var(--brand-primary)}`}</style>
