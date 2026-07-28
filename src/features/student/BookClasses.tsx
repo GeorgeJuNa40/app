@@ -24,6 +24,8 @@ export default function BookClasses() {
 
   // Política de cancelación que definió el estudio (si la configuró).
   const cancellationPolicy = currentStudio!.branding.cancellationPolicy?.trim();
+  // Candado: horas mínimas de anticipación para poder cancelar una reserva.
+  const cancelHours = currentStudio!.branding.cancellationHours ?? 0;
 
   return (
     <>
@@ -63,6 +65,22 @@ export default function BookClasses() {
         renderAction={(s, seats) => {
           const bookingId = myActiveBookings.get(s.id);
           if (bookingId) {
+            // Candado: si faltan menos horas que las exigidas por el estudio,
+            // se bloquea la cancelación para cumplir su política.
+            const hoursUntil = (new Date(s.startsAt).getTime() - Date.now()) / 3_600_000;
+            const locked = cancelHours > 0 && hoursUntil < cancelHours;
+            if (locked) {
+              return (
+                <div className="text-center">
+                  <Button variant="secondary" disabled className="w-full">
+                    🔒 Reserva bloqueada
+                  </Button>
+                  <p className="mt-1 text-xs text-ink-faint">
+                    No se puede cancelar con menos de {cancelHours} h de anticipación.
+                  </p>
+                </div>
+              );
+            }
             return (
               <Button variant="danger" onClick={() => cancelBooking(bookingId)}>
                 Cancelar reserva
