@@ -1,7 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '../../lib/store';
 import { PageHeader, Card, Badge, Button, EmptyState, StatCard } from '../../components/ui';
 import { fmtFullDay } from '../../lib/format';
+import { isPushConfigured, sendPushToUser } from '../../lib/push';
+import { notifySuccess, notifyError } from '../../lib/notify';
 import type { MembershipState } from '../../lib/types';
 
 // Centro de recordatorios del estudio: detecta a quién dar seguimiento (paquete
@@ -22,6 +24,21 @@ export default function Reminders() {
   const { studioUsers, membership, currentStudio } = useStore();
   const students = studioUsers('STUDENT');
   const studio = currentStudio!;
+  const pushOn = isPushConfigured();
+  const [sending, setSending] = useState<string | null>(null);
+
+  const sendPush = async (userId: string, text: string) => {
+    setSending(userId);
+    try {
+      const title = studio.branding.logoText || studio.name;
+      const { sent, error } = await sendPushToUser(userId, title, text, '/#/app/packages');
+      if (error) notifyError('notificación', error);
+      else if (sent > 0) notifySuccess('Notificación enviada.');
+      else notifyError('notificación', 'El alumno no tiene las notificaciones activadas.');
+    } finally {
+      setSending(null);
+    }
+  };
 
   const items = useMemo(() => {
     return students
@@ -103,7 +120,7 @@ export default function Reminders() {
                   )}
                 </p>
 
-                <div className="mt-4">
+                <div className="mt-4 space-y-2">
                   {link ? (
                     <a href={link} target="_blank" rel="noreferrer">
                       <Button className="w-full">Recordar por WhatsApp</Button>
@@ -111,6 +128,16 @@ export default function Reminders() {
                   ) : (
                     <Button className="w-full" variant="secondary" disabled>
                       Sin teléfono registrado
+                    </Button>
+                  )}
+                  {pushOn && (
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      disabled={sending === user.id}
+                      onClick={() => sendPush(user.id, text)}
+                    >
+                      {sending === user.id ? 'Enviando…' : '🔔 Recordar por notificación'}
                     </Button>
                   )}
                 </div>
