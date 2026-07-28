@@ -783,8 +783,16 @@ function applyPurchase(
     userPackages: [...prev.userPackages, userPackage],
     payments: [...prev.payments, payment],
   }));
-  void dbInsert('user_packages', rowUserPackage(userPackage));
-  void dbInsert('payments', rowPayment(payment));
+  // El paquete y el pago referencian a packages(id) por llave foránea. Si por
+  // alguna razón la fila del paquete no llegó a guardarse en la base (p. ej. un
+  // fallo puntual al crearlo), el insert se rechazaría y el pago no se
+  // registraría. Nos aseguramos de que el paquete exista (upsert idempotente)
+  // ANTES de insertar el user_package y el pago.
+  void (async () => {
+    await dbUpsert('packages', rowPackage(pkg));
+    await dbInsert('user_packages', rowUserPackage(userPackage));
+    await dbInsert('payments', rowPayment(payment));
+  })();
 }
 
 export function useStore(): StoreValue {
