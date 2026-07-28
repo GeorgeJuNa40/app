@@ -380,9 +380,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const pkg = db.packages.find((p) => p.id === up.packageId);
       const daysLeft = daysUntil(up.expiresAt);
       const creditsLeft = up.creditsTotal - up.creditsUsed;
+      // "Por vencer" es la parte FINAL de la vigencia del paquete, no un número
+      // fijo de días. Así, un paquete recién comprado sale "Activa" aunque su
+      // vigencia sea corta (ej. Starter de 7 días); solo se marca "Por vencer"
+      // cerca del final. Para paquetes largos, el aviso es a los 7 días o menos.
+      const validity = pkg?.validityDays ?? 30;
+      const expiringWindow = Math.min(7, Math.max(1, Math.round(validity * 0.3)));
       let state: MembershipState;
       if (daysLeft <= 0 || creditsLeft <= 0) state = 'expired';
-      else if (daysLeft <= 7) state = 'expiring';
+      else if (daysLeft <= expiringWindow) state = 'expiring';
       else state = 'active';
       return { state, planName: pkg?.name ?? null, creditsLeft, expiresAt: up.expiresAt, daysLeft };
     },
