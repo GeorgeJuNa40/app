@@ -5,6 +5,7 @@ import type { Role } from '../../lib/types';
 import Avatar from '../Avatar';
 import ImageUpload from '../ImageUpload';
 import InstallAppButton from '../InstallAppButton';
+import NotificationsButton from '../NotificationsButton';
 import StudioLogo from '../StudioLogo';
 
 interface NavItem {
@@ -113,6 +114,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           onSelect={(url) => updateUserAvatar(currentUser.id, url)}
         />
         <InstallAppButton className="mb-2" />
+        <NotificationsButton className="mb-2" />
         <button
           onClick={handleLogout}
           className="w-full rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-cream-dark text-left"
