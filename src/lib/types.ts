@@ -90,6 +90,8 @@ export interface Studio {
   services: OptionalService[];
   whatsapp: WhatsappConfig;
   subscription: Subscription;
+  stripeAccountId?: string; // cuenta Connect (Express) del estudio, para recibir pagos
+  stripeChargesEnabled?: boolean; // el estudio ya puede recibir cobros en su cuenta
 }
 
 export interface CoachProfile {

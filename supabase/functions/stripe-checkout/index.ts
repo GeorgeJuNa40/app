@@ -79,35 +79,52 @@ Deno.serve(async (req) => {
 
       const { data: studio } = await supabase
         .from('studios')
-        .select('branding')
+        .select('branding, stripe_account_id, stripe_charges_enabled')
         .eq('id', me.studio_id)
         .single();
+
+      // Cargo DIRECTO en la cuenta Connect del estudio: el dinero llega a SU
+      // cuenta (la plataforma no lo toca ni cobra comisión). Requiere que el
+      // estudio haya conectado su cuenta y pueda recibir cobros.
+      const acct = studio?.stripe_account_id as string | undefined;
+      if (!acct || !studio?.stripe_charges_enabled) {
+        return json(
+          {
+            error:
+              'El estudio aún no activó los pagos en línea. Pídele que conecte su cuenta de Stripe en la sección Suscripción.',
+          },
+          400,
+        );
+      }
       const currency = (studio?.branding?.currencyCode ?? 'USD').toLowerCase();
 
-      const session = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        line_items: [
-          {
-            quantity: 1,
-            price_data: {
-              currency,
-              unit_amount: Math.round(Number(pkg.price_usd) * 100),
-              product_data: {
-                name: pkg.name,
-                description: pkg.description || undefined,
+      const session = await stripe.checkout.sessions.create(
+        {
+          mode: 'payment',
+          line_items: [
+            {
+              quantity: 1,
+              price_data: {
+                currency,
+                unit_amount: Math.round(Number(pkg.price_usd) * 100),
+                product_data: {
+                  name: pkg.name,
+                  description: pkg.description || undefined,
+                },
               },
             },
+          ],
+          success_url: `${APP_URL}/?pago=exito`,
+          cancel_url: `${APP_URL}/?pago=cancelado`,
+          metadata: {
+            kind: 'package',
+            user_id: me.id,
+            studio_id: me.studio_id,
+            package_id: pkg.id,
           },
-        ],
-        success_url: `${APP_URL}/?pago=exito`,
-        cancel_url: `${APP_URL}/?pago=cancelado`,
-        metadata: {
-          kind: 'package',
-          user_id: me.id,
-          studio_id: me.studio_id,
-          package_id: pkg.id,
         },
-      });
+        { stripeAccount: acct },
+      );
       return json({ url: session.url });
     }
 
