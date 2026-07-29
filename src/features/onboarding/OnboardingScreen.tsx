@@ -24,6 +24,7 @@ export default function OnboardingScreen() {
   const [password, setPassword] = useState('');
   const [countryIso, setCountryIso] = useState(DEFAULT_COUNTRY_ISO);
   const [phone, setPhone] = useState('');
+  const [birthDate, setBirthDate] = useState('');
 
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -36,6 +37,7 @@ export default function OnboardingScreen() {
     setError('');
     setPassword('');
     setPhone('');
+    setBirthDate('');
     setMode(m);
   };
 
@@ -55,12 +57,14 @@ export default function OnboardingScreen() {
           await signUp({ fullName, email, password, studioName, ...contact });
         } else {
           if (!ceu.trim()) throw new Error('Escribe el Código de Estudio (CEU).');
+          if (!birthDate) throw new Error('Indica tu fecha de nacimiento.');
           await signUp({
             fullName,
             email,
             password,
             ceuCode: ceu,
             role: isCoachInvite ? 'COACH' : 'STUDENT',
+            birthDate,
             ...contact,
           });
         }
@@ -168,6 +172,17 @@ export default function OnboardingScreen() {
                     Definimos la moneda de tu estudio según tu país: {getCountry(countryIso).currency}.
                   </span>
                 )}
+              </label>
+            )}
+            {mode === 'join' && (
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-ink-soft">Fecha de nacimiento</span>
+                <input
+                  type="date"
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                  className="w-full rounded-xl border border-cream-dark bg-white px-4 py-3 outline-none focus:ring-2 ring-brand"
+                />
               </label>
             )}
             <label className="block">
