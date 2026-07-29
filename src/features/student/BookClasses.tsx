@@ -26,6 +26,8 @@ export default function BookClasses() {
   const cancellationPolicy = currentStudio!.branding.cancellationPolicy?.trim();
   // Candado: horas mínimas de anticipación para poder cancelar una reserva.
   const cancelHours = currentStudio!.branding.cancellationHours ?? 0;
+  // Cierre de reservas: minutos antes de la clase en que ya no se puede reservar.
+  const cutoffMin = currentStudio!.branding.bookingCutoffMinutes ?? 0;
 
   return (
     <>
@@ -87,14 +89,24 @@ export default function BookClasses() {
               </Button>
             );
           }
-          const canBook = seats > 0 && creditsLeft > 0;
+          // Cierre por tiempo: aunque haya cupo, no se reserva si ya pasó el
+          // límite que fijó el estudio (ej. 30 min antes de la clase).
+          const minutesUntil = (new Date(s.startsAt).getTime() - Date.now()) / 60000;
+          const closed = cutoffMin > 0 && minutesUntil < cutoffMin;
+          const canBook = seats > 0 && creditsLeft > 0 && !closed;
           return (
             <Button
               disabled={!canBook}
               onClick={() => bookSession(s.id)}
               className="w-full"
             >
-              {seats === 0 ? 'Sin lugares' : creditsLeft === 0 ? 'Sin clases' : 'Reservar'}
+              {closed
+                ? 'Reservas cerradas'
+                : seats === 0
+                  ? 'Sin lugares'
+                  : creditsLeft === 0
+                    ? 'Sin clases'
+                    : 'Reservar'}
             </Button>
           );
         }}

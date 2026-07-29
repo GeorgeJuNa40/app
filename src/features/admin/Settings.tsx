@@ -1,19 +1,60 @@
+import { useEffect, useState } from 'react';
 import { useStore } from '../../lib/store';
-import { PageHeader, Card } from '../../components/ui';
+import { PageHeader, Card, Button } from '../../components/ui';
 import ImageUpload from '../../components/ImageUpload';
 import StudioLogo from '../../components/StudioLogo';
 import InviteCard from './InviteCard';
 import { CURRENCIES } from '../../lib/countries';
+import type { Branding } from '../../lib/types';
 
 // Configuración: datos del negocio, fotos y White-label (branding).
+// Los cambios se guardan SOLO al tocar "Guardar cambios" (no en automático).
 export default function Settings() {
   const { currentStudio, updateStudio, updateBranding } = useStore();
   const s = currentStudio!;
-  const b = s.branding;
   const fonts = ['Inter', 'Georgia', 'Poppins', 'system-ui'];
 
-  const addPhoto = (dataUrl: string) => updateStudio({ photos: [...s.photos, dataUrl] });
-  const removePhoto = (i: number) => updateStudio({ photos: s.photos.filter((_, idx) => idx !== i) });
+  // Borrador local: aquí viven los cambios hasta que se guardan.
+  const makeDraft = () => ({
+    name: s.name,
+    phone: s.phone,
+    email: s.email,
+    address: s.address,
+    photos: s.photos,
+    branding: { ...s.branding } as Branding,
+  });
+  const [draft, setDraft] = useState(makeDraft);
+  const [dirty, setDirty] = useState(false);
+
+  // Si cambia el estudio (recarga / cambio de sesión), re-sincroniza el borrador.
+  useEffect(() => {
+    setDraft(makeDraft());
+    setDirty(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.id]);
+
+  const b = draft.branding;
+  const setStudio = (patch: Partial<typeof draft>) => {
+    setDraft((d) => ({ ...d, ...patch }));
+    setDirty(true);
+  };
+  const setBrand = (patch: Partial<Branding>) => {
+    setDraft((d) => ({ ...d, branding: { ...d.branding, ...patch } }));
+    setDirty(true);
+  };
+
+  const addPhoto = (dataUrl: string) => setStudio({ photos: [...draft.photos, dataUrl] });
+  const removePhoto = (i: number) => setStudio({ photos: draft.photos.filter((_, idx) => idx !== i) });
+
+  const save = () => {
+    updateStudio({ name: draft.name, phone: draft.phone, email: draft.email, address: draft.address, photos: draft.photos });
+    updateBranding(draft.branding);
+    setDirty(false);
+  };
+  const discard = () => {
+    setDraft(makeDraft());
+    setDirty(false);
+  };
 
   return (
     <>
@@ -26,10 +67,10 @@ export default function Settings() {
         <Card className="p-6 space-y-4">
           <h2 className="font-semibold text-ink">Datos del negocio</h2>
           <Field label="Nombre del negocio">
-            <input className="input" value={s.name} onChange={(e) => updateStudio({ name: e.target.value })} />
+            <input className="input" value={draft.name} onChange={(e) => setStudio({ name: e.target.value })} />
           </Field>
           <Field label="Nombre visible (texto, si no subes logo)">
-            <input className="input" value={b.logoText} onChange={(e) => updateBranding({ logoText: e.target.value })} />
+            <input className="input" value={b.logoText} onChange={(e) => setBrand({ logoText: e.target.value })} />
           </Field>
           <div>
             <span className="mb-1 block text-sm font-medium text-ink-soft">Logo del estudio (imagen)</span>
@@ -37,25 +78,25 @@ export default function Settings() {
               <div className="grid h-12 min-w-[3rem] place-items-center rounded-lg bg-cream-dark/40 px-2">
                 <StudioLogo branding={b} imgClass="h-10 max-w-[120px]" textClass="text-sm font-bold text-brand" />
               </div>
-              <ImageUpload label="Subir logo" onSelect={(url) => updateBranding({ logoUrl: url })} />
+              <ImageUpload label="Subir logo" onSelect={(url) => setBrand({ logoUrl: url })} />
               {b.logoUrl && (
-                <button type="button" onClick={() => updateBranding({ logoUrl: undefined })} className="text-sm text-red-600">Quitar</button>
+                <button type="button" onClick={() => setBrand({ logoUrl: undefined })} className="text-sm text-red-600">Quitar</button>
               )}
             </div>
             <p className="mt-1 text-xs text-ink-faint">Se muestra en la barra lateral y el encabezado, visible para admin, coaches y alumnos.</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Teléfono"><input className="input" value={s.phone} onChange={(e) => updateStudio({ phone: e.target.value })} /></Field>
-            <Field label="Correo"><input className="input" value={s.email} onChange={(e) => updateStudio({ email: e.target.value })} /></Field>
+            <Field label="Teléfono"><input className="input" value={draft.phone} onChange={(e) => setStudio({ phone: e.target.value })} /></Field>
+            <Field label="Correo"><input className="input" value={draft.email} onChange={(e) => setStudio({ email: e.target.value })} /></Field>
           </div>
           <Field label="Dirección">
-            <input className="input" value={s.address} onChange={(e) => updateStudio({ address: e.target.value })} />
+            <input className="input" value={draft.address} onChange={(e) => setStudio({ address: e.target.value })} />
           </Field>
           <Field label="Moneda (se aplica a los precios de tus paquetes)">
             <select
               className="input"
               value={b.currencyCode ?? 'USD'}
-              onChange={(e) => updateBranding({ currencyCode: e.target.value })}
+              onChange={(e) => setBrand({ currencyCode: e.target.value })}
             >
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
@@ -68,11 +109,11 @@ export default function Settings() {
         <Card className="p-6">
           <h2 className="font-semibold text-ink mb-3">Fotos del estudio</h2>
           <ImageUpload variant="dropzone" label="Subir foto desde tu dispositivo" className="w-full mb-4" onSelect={addPhoto} />
-          {s.photos.length === 0 ? (
+          {draft.photos.length === 0 ? (
             <div className="rounded-xl border border-dashed border-cream-dark p-8 text-center text-ink-faint text-sm">Aún no has agregado fotos.</div>
           ) : (
             <div className="grid grid-cols-3 gap-2">
-              {s.photos.map((p, i) => (
+              {draft.photos.map((p, i) => (
                 <div key={i} className="relative group">
                   <img src={p} alt="" className="h-24 w-full object-cover rounded-lg" />
                   <button onClick={() => removePhoto(i)} className="absolute top-1 right-1 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-white text-xs">✕</button>
@@ -85,11 +126,11 @@ export default function Settings() {
         {/* White-label */}
         <Card className="p-6 space-y-4">
           <h2 className="font-semibold text-ink">White-label (branding)</h2>
-          <ColorField label="Color primario" value={b.primaryColor} onChange={(v) => updateBranding({ primaryColor: v })} />
-          <ColorField label="Color secundario (fondo)" value={b.secondaryColor} onChange={(v) => updateBranding({ secondaryColor: v })} />
-          <ColorField label="Color de acento / texto" value={b.accentColor} onChange={(v) => updateBranding({ accentColor: v })} />
+          <ColorField label="Color primario" value={b.primaryColor} onChange={(v) => setBrand({ primaryColor: v })} />
+          <ColorField label="Color secundario (fondo)" value={b.secondaryColor} onChange={(v) => setBrand({ secondaryColor: v })} />
+          <ColorField label="Color de acento / texto" value={b.accentColor} onChange={(v) => setBrand({ accentColor: v })} />
           <Field label="Tipografía">
-            <select className="input" value={b.fontFamily} onChange={(e) => updateBranding({ fontFamily: e.target.value })}>
+            <select className="input" value={b.fontFamily} onChange={(e) => setBrand({ fontFamily: e.target.value })}>
               {fonts.map((f) => <option key={f} value={f}>{f}</option>)}
             </select>
           </Field>
@@ -97,16 +138,16 @@ export default function Settings() {
 
         {/* Vista previa White-label */}
         <Card className="p-6">
-          <p className="text-xs uppercase text-ink-faint mb-3">Vista previa en vivo</p>
+          <p className="text-xs uppercase text-ink-faint mb-3">Vista previa</p>
           <div className="rounded-2xl p-6 border" style={{ background: b.secondaryColor, borderColor: b.primaryColor }}>
             <p className="text-2xl font-black" style={{ color: b.primaryColor, fontFamily: b.fontFamily }}>{b.logoText}</p>
             <p className="mt-2" style={{ color: b.accentColor, fontFamily: b.fontFamily }}>Encuentra tu equilibrio. Reserva tu próxima clase.</p>
             <button className="mt-4 rounded-xl px-4 py-2 text-sm font-semibold" style={{ background: b.primaryColor, color: b.secondaryColor }}>Reservar clase</button>
           </div>
-          <p className="mt-4 text-sm text-ink-faint">Los cambios se aplican de inmediato a toda la interfaz del estudio.</p>
+          <p className="mt-4 text-sm text-ink-faint">Los cambios se aplican a toda la interfaz cuando tocas <strong>Guardar cambios</strong>.</p>
         </Card>
 
-        {/* Política de cancelación (visible para el alumno) */}
+        {/* Reservas y cancelación */}
         <Card className="p-6 lg:col-span-2 space-y-4">
           <div>
             <h2 className="font-semibold text-ink">Política de cancelación</h2>
@@ -118,32 +159,62 @@ export default function Settings() {
               className="input"
               rows={4}
               value={b.cancellationPolicy ?? ''}
-              onChange={(e) => updateBranding({ cancellationPolicy: e.target.value })}
+              onChange={(e) => setBrand({ cancellationPolicy: e.target.value })}
               placeholder="Ej. Puedes cancelar tu reserva hasta 4 horas antes de la clase sin penalización. Después de ese tiempo, la clase se descuenta de tu paquete."
             />
           </div>
 
-          <div className="border-t border-cream-dark pt-4">
-            <Field label="Candado de cancelación — horas de anticipación">
-              <input
-                type="number"
-                min={0}
-                step={1}
-                className="input"
-                value={b.cancellationHours ?? 0}
-                onChange={(e) =>
-                  updateBranding({ cancellationHours: Math.max(0, Math.floor(Number(e.target.value) || 0)) })
-                }
-              />
-            </Field>
-            <p className="mt-1 text-xs text-ink-faint">
-              Si pones <strong>24</strong>, ningún alumno podrá cancelar una reserva cuando falten menos
-              de 24 horas para la clase: el botón de cancelar se bloquea automáticamente con un candado.
-              Usa <strong>0</strong> para permitir cancelar en cualquier momento.
-            </p>
+          <div className="grid gap-4 sm:grid-cols-2 border-t border-cream-dark pt-4">
+            <div>
+              <Field label="Candado de cancelación — horas de anticipación">
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  className="input"
+                  value={b.cancellationHours ?? 0}
+                  onChange={(e) => setBrand({ cancellationHours: Math.max(0, Math.floor(Number(e.target.value) || 0)) })}
+                />
+              </Field>
+              <p className="mt-1 text-xs text-ink-faint">
+                Con <strong>24</strong>, nadie puede cancelar si faltan menos de 24 h. Usa <strong>0</strong> para permitir cancelar siempre.
+              </p>
+            </div>
+
+            <div>
+              <Field label="Cierre de reservas — minutos antes de la clase">
+                <input
+                  type="number"
+                  min={0}
+                  step={5}
+                  className="input"
+                  value={b.bookingCutoffMinutes ?? 0}
+                  onChange={(e) => setBrand({ bookingCutoffMinutes: Math.max(0, Math.floor(Number(e.target.value) || 0)) })}
+                />
+              </Field>
+              <p className="mt-1 text-xs text-ink-faint">
+                Con <strong>30</strong>, aunque queden lugares, no se puede reservar si faltan menos de 30 min para la clase. Usa <strong>0</strong> para no poner límite.
+              </p>
+            </div>
           </div>
         </Card>
       </div>
+
+      {/* Barra de guardado (los cambios NO se aplican hasta tocar Guardar) */}
+      <div className="sticky bottom-0 z-10 mt-6 -mx-4 border-t border-cream-dark bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+          <p className="text-sm text-ink-soft">
+            {dirty ? '● Tienes cambios sin guardar' : '✓ Todo guardado'}
+          </p>
+          <div className="flex gap-2">
+            {dirty && (
+              <Button variant="ghost" onClick={discard}>Descartar</Button>
+            )}
+            <Button onClick={save} disabled={!dirty}>Guardar cambios</Button>
+          </div>
+        </div>
+      </div>
+
       <style>{`.input{width:100%;border:1px solid #E8E3D6;border-radius:.75rem;padding:.6rem .8rem;background:#fff;outline:none}.input:focus{box-shadow:0 0 0 2px var(--brand-primary)}`}</style>
     </>
   );
