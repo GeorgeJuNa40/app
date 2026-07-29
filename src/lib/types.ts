@@ -91,6 +91,7 @@ export interface User {
   fullName: string;
   email: string;
   phone: string;
+  birthDate?: string; // fecha de nacimiento (ISO YYYY-MM-DD) — para el cumpleaños en el CRM
   avatarInitials: string;
   avatarUrl?: string; // foto de perfil (subida como archivo)
   createdAt: string;

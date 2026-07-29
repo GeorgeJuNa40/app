@@ -25,6 +25,15 @@ const SOURCE_LABEL: Record<'studio' | 'online', string> = {
   online: 'En línea',
 };
 
+// Formatea el cumpleaños (día y mes) desde una fecha ISO YYYY-MM-DD.
+const MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+function fmtBirthday(iso?: string): string | null {
+  if (!iso) return null;
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return `${d} ${MONTHS_ES[m - 1]}`;
+}
+
 // CRM de alumnos: contacto, clases agendadas, membresía y registro de pagos.
 export default function MembersCRM() {
   const { db, currentStudio, studioUsers, membership, registerManualPlan } = useStore();
@@ -124,6 +133,9 @@ export default function MembersCRM() {
                         <div>
                           <p className="font-medium text-ink">{s.fullName}</p>
                           <p className="text-xs text-ink-faint">Alta {fmtDay(s.createdAt)}</p>
+                          {fmtBirthday(s.birthDate) && (
+                            <p className="text-xs text-ink-faint">🎂 {fmtBirthday(s.birthDate)}</p>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -204,6 +216,9 @@ export default function MembersCRM() {
                   <div>
                     <h2 className="text-lg font-bold text-ink">{detail.fullName}</h2>
                     <p className="text-sm text-ink-faint">{detail.phone} · {detail.email}</p>
+                    {fmtBirthday(detail.birthDate) && (
+                      <p className="text-sm text-ink-faint">🎂 Cumpleaños: {fmtBirthday(detail.birthDate)}</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mb-4">
