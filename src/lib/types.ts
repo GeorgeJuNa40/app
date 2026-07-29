@@ -26,6 +26,7 @@ export interface Branding {
   currencyCode?: string; // moneda local del estudio (ej. MXN); default USD
   cancellationPolicy?: string; // política de cancelación (la ve el alumno)
   cancellationHours?: number; // horas mínimas de anticipación para cancelar (candado)
+  bookingCutoffMinutes?: number; // minutos antes de la clase en que se cierran las reservas
 }
 
 // Servicio opcional editable por el estudio (Nutrición, Kinesiología, etc.).
