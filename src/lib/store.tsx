@@ -19,6 +19,7 @@ import type {
   PaymentMethod,
   PlanId,
   Reward,
+  StarEntry,
   Studio,
   User,
   UserPackage,
@@ -89,11 +90,13 @@ interface StoreValue {
   seatsLeft: (sessionId: string) => number;
   studioUsers: (role: User['role']) => User[];
   starBalance: (userId: string) => number;
+  isNewStudent: (userId: string) => boolean; // aún no ha tenido su primer check-in
   membership: (userId: string) => MembershipInfo;
   availableCredits: (userId: string) => number; // créditos usables (activos, con vigencia)
   // Alumno
   bookSession: (sessionId: string) => void;
   cancelBooking: (bookingId: string) => void;
+  markAttendance: (bookingId: string, attended: boolean) => void; // el coach marca asistencia
   buyPackageOnline: (packageId: string, method: PaymentMethod) => void;
   redeemReward: (rewardId: string) => void;
   // Estudio — pagos y planes
@@ -373,6 +376,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     starBalance(userId) {
       return db.stars.filter((s) => s.userId === userId).reduce((a, s) => a + s.delta, 0);
     },
+    // Alumno "nuevo": aún no tiene ninguna asistencia registrada (primer check-in).
+    isNewStudent(userId) {
+      return !db.bookings.some((b) => b.userId === userId && b.status === 'ATTENDED');
+    },
     membership(userId) {
       const ups = db.userPackages.filter((p) => p.userId === userId);
       if (!ups.length) {
@@ -461,6 +468,37 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const up = db.userPackages.find((p) => p.id === booking.userPackageId);
         if (up) void dbUpdate('user_packages', up.id, { credits_used: Math.max(0, up.creditsUsed - 1) });
       }
+    },
+
+    // El coach marca si el alumno asistió. Al asistir gana 1 estrella (recompensa);
+    // marcar "no asistió" NO devuelve la clase (penaliza reservar y no ir) y quita
+    // la estrella si se había dado. La estrella usa un id derivado de la reserva
+    // para que no se dupliquen aunque se cambie el estado varias veces.
+    markAttendance(bookingId, attended) {
+      const booking = db.bookings.find((b) => b.id === bookingId);
+      if (!booking) return;
+      const status: Booking['status'] = attended ? 'ATTENDED' : 'NO_SHOW';
+      const starId = `att-${bookingId}`;
+      const entry: StarEntry = {
+        id: starId,
+        userId: booking.userId,
+        delta: 1,
+        reason: 'attendance',
+        createdAt: new Date().toISOString(),
+      };
+      setDb((prev) => {
+        const bookings = prev.bookings.map((b) => (b.id === bookingId ? { ...b, status } : b));
+        let stars = prev.stars;
+        if (attended) {
+          if (!stars.some((s) => s.id === starId)) stars = [...stars, entry];
+        } else {
+          stars = stars.filter((s) => s.id !== starId);
+        }
+        return { ...prev, bookings, stars };
+      });
+      void dbUpdate('bookings', bookingId, { status });
+      if (attended) void dbUpsert('star_entries', rowStar(entry));
+      else void dbDelete('star_entries', starId);
     },
 
     buyPackageOnline(packageId, method) {
