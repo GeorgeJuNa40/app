@@ -6,6 +6,7 @@ import Avatar from '../Avatar';
 import ImageUpload from '../ImageUpload';
 import InstallAppButton from '../InstallAppButton';
 import NotificationsButton from '../NotificationsButton';
+import NotificationsPrompt from '../NotificationsPrompt';
 import StudioLogo from '../StudioLogo';
 
 interface NavItem {
@@ -159,6 +160,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <main className="lg:pl-64">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">{children}</div>
       </main>
+
+      {/* Aviso automático para activar notificaciones (una sola vez). */}
+      <NotificationsPrompt />
     </div>
   );
 }
