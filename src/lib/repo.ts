@@ -53,6 +53,8 @@ function mapStudio(r: Row): Studio {
     services: r.services ?? [],
     whatsapp: { ...DEFAULT_WHATSAPP, ...(r.whatsapp ?? {}) },
     subscription: { ...DEFAULT_SUBSCRIPTION, ...(r.subscription ?? {}) },
+    stripeAccountId: r.stripe_account_id ?? undefined,
+    stripeChargesEnabled: r.stripe_charges_enabled ?? false,
   };
 }
 

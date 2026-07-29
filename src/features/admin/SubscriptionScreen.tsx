@@ -4,6 +4,7 @@ import { PageHeader, Card, Button, Badge } from '../../components/ui';
 import { daysUntil } from '../../lib/format';
 import { PLANS, PROMO_PRICE, PROMO_TRIAL_DAYS, getPlan } from '../../lib/plans';
 import { startStripeCheckout } from '../../lib/payments';
+import StripeConnectCard from './StripeConnectCard';
 import type { PlanId } from '../../lib/types';
 
 // Precio en USD con 2 decimales (los planes terminan en .99).
@@ -39,6 +40,9 @@ export default function SubscriptionScreen() {
   return (
     <>
       <PageHeader title="Suscripción" subtitle="Elige el plan Move yA ideal para tu estudio" />
+
+      {/* Conectar la cuenta de Stripe del estudio (recibir pagos de alumnos) */}
+      <StripeConnectCard />
 
       {/* Estado actual de la suscripción */}
       <Card className="mb-6 p-6">
