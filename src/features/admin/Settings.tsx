@@ -4,8 +4,9 @@ import { PageHeader, Card, Button } from '../../components/ui';
 import ImageUpload from '../../components/ImageUpload';
 import StudioLogo from '../../components/StudioLogo';
 import InviteCard from './InviteCard';
+import InfoPageEditor from './InfoPageEditor';
 import { CURRENCIES } from '../../lib/countries';
-import type { Branding } from '../../lib/types';
+import type { Branding, StudioInfoPage } from '../../lib/types';
 
 // Configuración: datos del negocio, fotos y White-label (branding).
 // Los cambios se guardan SOLO al tocar "Guardar cambios" (no en automático).
@@ -198,6 +199,15 @@ export default function Settings() {
             </div>
           </div>
         </Card>
+
+        {/* Página informativa pública (opcional — la llena el estudio) */}
+        <InfoPageEditor
+          value={b.infoPage ?? {}}
+          ceuCode={s.ceuCode}
+          onChange={(patch: Partial<StudioInfoPage>) =>
+            setBrand({ infoPage: { ...(b.infoPage ?? {}), ...patch } })
+          }
+        />
       </div>
 
       {/* Barra de guardado (los cambios NO se aplican hasta tocar Guardar) */}

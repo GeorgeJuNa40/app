@@ -12,6 +12,8 @@ import CoachGate from './features/coach/CoachGate';
 // Cada pantalla se carga bajo demanda (code-splitting) para aligerar la carga
 // inicial: el navegador solo descarga el código de la sección que se abre.
 const OnboardingScreen = lazy(() => import('./features/onboarding/OnboardingScreen'));
+// Página pública informativa del estudio (sin login).
+const StudioInfoPage = lazy(() => import('./features/public/StudioInfoPage'));
 
 const AdminDashboard = lazy(() => import('./features/admin/AdminDashboard'));
 const MembersCRM = lazy(() => import('./features/admin/MembersCRM'));
@@ -109,6 +111,9 @@ export default function App() {
   return (
     <Suspense fallback={<Splash />}>
     <Routes>
+      {/* Página informativa PÚBLICA del estudio (sin login). */}
+      <Route path="/info/:ceu" element={<StudioInfoPage />} />
+
       {/* Onboarding: pantalla de inicio con CEU. Si ya hay sesión, redirige. */}
       <Route
         path="/"

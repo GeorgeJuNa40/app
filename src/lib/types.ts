@@ -14,6 +14,19 @@ export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'paypal';
 
 export type MembershipState = 'active' | 'expiring' | 'expired' | 'none';
 
+// Página informativa pública (opcional): la llena el estudio si quiere, con la
+// info que decida compartir (clases, horarios, etc.). Todos los campos son
+// opcionales; los vacíos no se muestran.
+export interface StudioInfoPage {
+  enabled?: boolean; // el estudio la publica (activa su link/QR)
+  headline?: string; // título o frase principal
+  about?: string; // descripción libre del estudio
+  schedule?: string; // clases y horarios (texto libre)
+  hours?: string; // horario de atención
+  contact?: string; // teléfono, redes, ubicación (texto libre)
+  flyerUrl?: string; // imagen/flyer opcional (subida como archivo)
+}
+
 export interface Branding {
   primaryColor: string;
   secondaryColor: string;
@@ -27,6 +40,7 @@ export interface Branding {
   cancellationPolicy?: string; // política de cancelación (la ve el alumno)
   cancellationHours?: number; // horas mínimas de anticipación para cancelar (candado)
   bookingCutoffMinutes?: number; // minutos antes de la clase en que se cierran las reservas
+  infoPage?: StudioInfoPage; // página informativa pública (opcional, la llena el estudio)
 }
 
 // Servicio opcional editable por el estudio (Nutrición, Kinesiología, etc.).
