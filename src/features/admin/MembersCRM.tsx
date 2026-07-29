@@ -36,7 +36,7 @@ function fmtBirthday(iso?: string): string | null {
 
 // CRM de alumnos: contacto, clases agendadas, membresía y registro de pagos.
 export default function MembersCRM() {
-  const { db, currentStudio, studioUsers, membership, registerManualPlan } = useStore();
+  const { db, currentStudio, studioUsers, membership, registerManualPlan, isNewStudent } = useStore();
   const students = studioUsers('STUDENT');
   const packages = db.packages.filter((p) => p.studioId === currentStudio!.id && p.active);
 
@@ -131,7 +131,12 @@ export default function MembersCRM() {
                       <div className="flex items-center gap-2">
                         <Avatar url={s.avatarUrl} initials={s.avatarInitials} className="h-8 w-8 text-xs" />
                         <div>
-                          <p className="font-medium text-ink">{s.fullName}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-medium text-ink">{s.fullName}</p>
+                            {isNewStudent(s.id) && (
+                              <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">Nuevo</span>
+                            )}
+                          </div>
                           <p className="text-xs text-ink-faint">Alta {fmtDay(s.createdAt)}</p>
                           {fmtBirthday(s.birthDate) && (
                             <p className="text-xs text-ink-faint">🎂 {fmtBirthday(s.birthDate)}</p>
@@ -183,7 +188,12 @@ export default function MembersCRM() {
             <Card key={s.id} className="p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="font-medium text-ink">{s.fullName}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-medium text-ink">{s.fullName}</p>
+                    {isNewStudent(s.id) && (
+                      <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">Nuevo</span>
+                    )}
+                  </div>
                   <p className="text-xs text-ink-faint">{s.phone} · {s.email}</p>
                 </div>
                 <Badge tone={meta.tone}>{meta.label}</Badge>
