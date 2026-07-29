@@ -33,9 +33,20 @@ self.addEventListener('notificationclick', (event) => {
   const url = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      // Si la app ya está abierta, la llevamos a la sección de la notificación
+      // (antes solo la enfocaba y se quedaba en el inicio).
       for (const client of list) {
-        if ('focus' in client) return client.focus();
+        if ('focus' in client) {
+          if ('navigate' in client) {
+            return client
+              .navigate(url)
+              .then((c) => (c || client).focus())
+              .catch(() => client.focus());
+          }
+          return client.focus();
+        }
       }
+      // Si no hay ninguna ventana abierta, abrimos una en la sección correcta.
       if (self.clients.openWindow) return self.clients.openWindow(url);
     }),
   );
