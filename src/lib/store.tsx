@@ -59,6 +59,7 @@ export interface SignUpInput {
   studioName?: string; // para crear un estudio nuevo (ADMIN)
   role?: 'COACH' | 'STUDENT'; // rol al unirse por CEU (por defecto STUDENT)
   phone?: string; // teléfono con lada (ej. +52 55 1234 5678)
+  birthDate?: string; // fecha de nacimiento (YYYY-MM-DD)
   country?: string; // ISO del país (ej. MX)
   currency?: string; // moneda local derivada del país (ej. MXN)
 }
@@ -339,6 +340,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             ...(input.studioName ? { studio_name: input.studioName.trim() } : {}),
             ...(input.role ? { signup_role: input.role } : {}),
             ...(input.phone ? { phone: input.phone.trim() } : {}),
+            ...(input.birthDate ? { birth_date: input.birthDate } : {}),
             ...(input.country ? { country: input.country } : {}),
             ...(input.currency ? { currency: input.currency } : {}),
           },
