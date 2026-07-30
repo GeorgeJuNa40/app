@@ -27,6 +27,24 @@ const APP_URL = (Deno.env.get('APP_URL') ?? '').replace(/\/$/, '');
 // Precios mensuales de los planes del estudio (en centavos de USD).
 const PLAN_PRICES: Record<string, number> = { inicio: 1999, pro: 3999, premium: 7999 };
 
+// -------- Comisión de plataforma (Move yA) sobre los pagos en línea de alumnos
+// Se cobra AL ESTUDIO: sale de su parte del cargo directo (no se le suma al
+// alumno). Sirve para cubrir el costo de Stripe/Radar por cuentas conectadas y
+// dejar margen. Se configura con "secrets" en Supabase, SIN tocar el código:
+//   PLATFORM_FEE_PERCENT -> % del monto (ej. "5" = 5%)
+//   PLATFORM_FEE_FIXED   -> monto fijo por transacción, en la MISMA moneda del
+//                           paquete (ej. "3" = 3 pesos). Opcional.
+// Si ambos están en 0 (o sin definir), no se cobra comisión (0%).
+const FEE_PERCENT = Number(Deno.env.get('PLATFORM_FEE_PERCENT') ?? '0') || 0;
+const FEE_FIXED = Number(Deno.env.get('PLATFORM_FEE_FIXED') ?? '0') || 0;
+
+// Calcula la comisión (en la unidad mínima: centavos) a partir del monto total.
+// Nunca cobra más que el propio pago: deja al menos 1 unidad al estudio.
+function platformFee(amountMinor: number): number {
+  const fee = Math.round(amountMinor * (FEE_PERCENT / 100)) + Math.round(FEE_FIXED * 100);
+  return Math.max(0, Math.min(fee, amountMinor - 1));
+}
+
 // Encabezados CORS: se permiten los que envía la librería de Supabase
 // (authorization, x-client-info, apikey, content-type).
 const cors = {
@@ -84,8 +102,8 @@ Deno.serve(async (req) => {
         .single();
 
       // Cargo DIRECTO en la cuenta Connect del estudio: el dinero llega a SU
-      // cuenta (la plataforma no lo toca ni cobra comisión). Requiere que el
-      // estudio haya conectado su cuenta y pueda recibir cobros.
+      // cuenta (la plataforma no lo toca). Requiere que el estudio haya
+      // conectado su cuenta y pueda recibir cobros.
       const acct = studio?.stripe_account_id as string | undefined;
       if (!acct || !studio?.stripe_charges_enabled) {
         return json(
@@ -97,6 +115,9 @@ Deno.serve(async (req) => {
         );
       }
       const currency = (studio?.branding?.currencyCode ?? 'USD').toLowerCase();
+      const amountMinor = Math.round(Number(pkg.price_usd) * 100);
+      // Comisión de Move yA (sale de la parte del estudio). Si es 0, no se cobra.
+      const fee = platformFee(amountMinor);
 
       const session = await stripe.checkout.sessions.create(
         {
@@ -106,7 +127,7 @@ Deno.serve(async (req) => {
               quantity: 1,
               price_data: {
                 currency,
-                unit_amount: Math.round(Number(pkg.price_usd) * 100),
+                unit_amount: amountMinor,
                 product_data: {
                   name: pkg.name,
                   description: pkg.description || undefined,
@@ -114,6 +135,9 @@ Deno.serve(async (req) => {
               },
             },
           ],
+          // application_fee_amount: parte que se transfiere de la cuenta del
+          // estudio a la plataforma (Move yA). Solo se agrega si hay comisión.
+          ...(fee > 0 ? { payment_intent_data: { application_fee_amount: fee } } : {}),
           success_url: `${APP_URL}/?pago=exito`,
           cancel_url: `${APP_URL}/?pago=cancelado`,
           metadata: {

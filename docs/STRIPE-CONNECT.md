@@ -2,24 +2,43 @@
 
 Con esto, **cada estudio conecta su propia cuenta de Stripe** y los pagos en
 línea de sus alumnos llegan **directo a su banco**. Tú (la plataforma) ya no
-gestionas ese dinero y **no cobras comisión** (0%). Cada estudio paga las
-comisiones normales de Stripe de sus propios cobros.
+gestionas ese dinero. Cada estudio paga las comisiones normales de Stripe de sus
+propios cobros.
 
 - Tipo de cuenta: **Express** (Stripe hospeda el registro; el estudio se da de
   alta con un formulario en minutos).
 - Modelo: **cargo directo** en la cuenta del estudio.
 - La **suscripción del estudio a Move yA** (lo que te pagan a ti) NO cambia:
   sigue cobrándose en tu cuenta de plataforma como hasta ahora.
+- **Comisión de plataforma:** configurable. Con `PLATFORM_FEE_PERCENT` /
+  `PLATFORM_FEE_FIXED` cobras al estudio un % (y/o fijo) por cada pago en línea
+  de sus alumnos; ese remanente cubre el costo de Stripe/Radar y te deja margen.
+  Si no defines nada, es **0%**.
+
+> ⚠️ **Responsabilidad de pérdidas (Express):** al usar cuentas Express con
+> cargo directo, la **plataforma** es responsable de los saldos negativos, y
+> Stripe cobra **Radar** por cuenta conectada y por transacción. Por eso conviene
+> cobrar una comisión de plataforma (ver más abajo) en vez de absorber ese costo.
 
 ---
 
 ## Lo que tienes que hacer tú (una sola vez)
 
-### 1. Habilitar Connect en tu panel de Stripe
+### 1. Habilitar Connect y completar el perfil de plataforma
 1. Entra a **https://dashboard.stripe.com** con tu cuenta (la de la plataforma).
 2. Ve a **Connect** (menú lateral) → **Get started / Empezar**.
 3. Elige la opción de **plataforma / marketplace** y activa **Express**.
-4. Completa el perfil de plataforma que te pida Stripe (nombre, sitio, etc.).
+4. Completa el **perfil de plataforma**:
+   **https://dashboard.stripe.com/settings/connect/platform-profile**
+   - **Flujo de fondos:** "los vendedores cobran directamente" (cargo directo).
+   - **Responsabilidad por saldo negativo:** con Express la lleva la plataforma
+     (tú). Dale **Confirmar** al reconocimiento.
+   - **Cumplimiento continuo del vendedor:** dale **Confirmar** (con onboarding
+     alojado por Stripe, casi todo lo hace Stripe).
+
+> Si no completas el perfil, al conectar un estudio verás el error
+> *"Please review the responsibilities of managing losses for connected
+> accounts…"*. Se arregla confirmando esos reconocimientos en el link de arriba.
 
 > Si tus estudios están en un país distinto al de tu cuenta, revisa en Connect
 > que ese país esté permitido (pagos transfronterizos). Para México/EE. UU. y la
@@ -48,9 +67,22 @@ también los eventos de las **cuentas conectadas**:
    (escuchar eventos de cuentas conectadas).
 3. Asegúrate de que incluya el evento **`checkout.session.completed`**.
 
-> Si no activas esto, el pago se cobra pero **no se registra** en la app. El
-> mismo `STRIPE_WEBHOOK_SECRET` sirve para ambos tipos de evento; no cambia nada
-> más. **No** necesitas volver a publicar la función `stripe-webhook`.
+> Si no activas esto, el pago se cobra pero **no se registra** en la app. Con la
+> nueva UI de Stripe cada webhook escucha un solo origen (tu cuenta O cuentas
+> conectadas); por eso `stripe-webhook` acepta dos secretos:
+> `STRIPE_WEBHOOK_SECRET` (tu cuenta) y `STRIPE_WEBHOOK_SECRET_CONNECT` (cuentas
+> conectadas).
+
+### 6. Configurar tu comisión de plataforma (opcional pero recomendado)
+Para que **el estudio** pague el costo de Stripe/Radar (y tú no lo absorbas),
+define en **Supabase → Edge Functions → Secrets** uno o ambos:
+- `PLATFORM_FEE_PERCENT` — % del pago (ej. `5` = 5%).
+- `PLATFORM_FEE_FIXED` — monto fijo por transacción, en la moneda del paquete
+  (ej. `3` = 3 pesos). Opcional; puede quedar en 0.
+
+La comisión sale de la **parte del estudio** (cargo directo), no se le suma al
+alumno. Tras cambiar un secret, **vuelve a publicar `stripe-checkout`**. Si no
+defines nada, la comisión es **0%**.
 
 ---
 
@@ -79,7 +111,8 @@ igual, sin Stripe.
 ---
 
 ## Notas
-- **0% de comisión de plataforma:** no se cobra `application_fee`. Si más adelante
-  quieres cobrar un %, se agrega en `stripe-checkout` (`application_fee_amount`).
+- **Comisión de plataforma:** se aplica como `application_fee_amount` sobre el
+  cargo directo, configurable con `PLATFORM_FEE_PERCENT` / `PLATFORM_FEE_FIXED`
+  (ver paso 6). Sin esos secrets, es 0%.
 - La app guarda solo el **id de la cuenta** del estudio y si **puede cobrar**;
   los datos bancarios los guarda **Stripe**, no la app.
