@@ -11,6 +11,7 @@
 //
 // Requiere estos "secrets" en Supabase:
 //   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY
+//   (opcional) STRIPE_WEBHOOK_SECRET_CONNECT para el webhook de cuentas conectadas.
 //
 // IMPORTANTE: despliega esta función con "Enforce JWT" DESACTIVADO (Stripe no
 // envía un JWT de usuario; la seguridad la da la firma del webhook).
@@ -25,7 +26,13 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
 });
 // Proveedor de criptografía para verificar la firma del webhook en Deno.
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
-const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') ?? '';
+// Se aceptan DOS secretos: uno para los eventos de tu cuenta (suscripciones) y
+// otro para los de las cuentas conectadas (pagos de alumnos con Stripe Connect).
+// Cada webhook de Stripe tiene su propio secreto; probamos ambos.
+const webhookSecrets = [
+  Deno.env.get('STRIPE_WEBHOOK_SECRET') ?? '',
+  Deno.env.get('STRIPE_WEBHOOK_SECRET_CONNECT') ?? '',
+].filter(Boolean);
 
 // Cliente administrador (service role) — solo existe aquí, en el servidor.
 const admin = createClient(
@@ -39,12 +46,18 @@ Deno.serve(async (req) => {
   const sig = req.headers.get('stripe-signature') ?? '';
   const raw = await req.text();
 
-  let event: Stripe.Event;
-  try {
-    event = await stripe.webhooks.constructEventAsync(raw, sig, webhookSecret, undefined, cryptoProvider);
-  } catch (e) {
-    return new Response(`Firma inválida: ${(e as Error).message}`, { status: 400 });
+  // Verifica la firma probando cada secreto (tu cuenta o cuentas conectadas).
+  let event: Stripe.Event | null = null;
+  let lastErr = 'sin secreto configurado';
+  for (const secret of webhookSecrets) {
+    try {
+      event = await stripe.webhooks.constructEventAsync(raw, sig, secret, undefined, cryptoProvider);
+      break;
+    } catch (e) {
+      lastErr = (e as Error).message;
+    }
   }
+  if (!event) return new Response(`Firma inválida: ${lastErr}`, { status: 400 });
 
   try {
     if (event.type === 'checkout.session.completed') {
