@@ -16,40 +16,70 @@ export const PROMO_PRICE = 1;
 export const PROMO_TRIAL_DAYS = 14;
 export const PROMO_PLAN: PlanId = 'pro'; // plan que se habilita durante la prueba
 
+// ---------------------------------------------------------------------------
+// Capacidades por plan. Cada función "premium/pro" está protegida con una de
+// estas capacidades; el menú y las rutas revisan `planHas()` para mostrarla o
+// no. Así el plan Inicio NO ve las funciones de Pro/Premium.
+// ---------------------------------------------------------------------------
+export type PlanCapability =
+  | 'whitelabel' // marca y colores propios
+  | 'rewards' // gamificación y recompensas
+  | 'services' // servicios opcionales
+  | 'reports' // reportes de ingresos y asistencia
+  | 'reportsAdvanced' // reportes avanzados
+  | 'whatsapp' // agente de WhatsApp con IA
+  | 'publicInfo'; // página informativa pública (QR/link)
+
+export const PLAN_CAPABILITIES: Record<PlanId, PlanCapability[]> = {
+  // Inicio: lo esencial para operar (calendario, CRM, recordatorios, cobros).
+  inicio: [],
+  // Pro: marca propia, recompensas, servicios, reportes y página pública.
+  pro: ['whitelabel', 'rewards', 'services', 'reports', 'publicInfo'],
+  // Premium: todo lo de Pro + WhatsApp IA, reportes avanzados, etc.
+  premium: ['whitelabel', 'rewards', 'services', 'reports', 'reportsAdvanced', 'whatsapp', 'publicInfo'],
+};
+
+// ¿El plan incluye la capacidad? (por defecto asume el plan más limitado)
+export function planHas(plan: PlanId | undefined | null, cap: PlanCapability): boolean {
+  return PLAN_CAPABILITIES[plan ?? 'inicio']?.includes(cap) ?? false;
+}
+
 export const PLANS: Plan[] = [
   {
     id: 'inicio',
     name: 'Inicio',
-    priceUsd: 19.99,
+    priceUsd: 24.99,
     tagline: 'Para estudios que están comenzando',
     features: [
       'Hasta 50 alumnos activos',
       'Hasta 3 coaches',
       'Calendario y reservas en línea',
-      'Gestión de paquetes y pagos (CRM)',
-      'Recordatorios de clase',
+      'CRM: paquetes, pagos y asistencia',
+      'Recordatorios y notificaciones push',
+      'Cobros en línea con tarjeta (Stripe)',
     ],
   },
   {
     id: 'pro',
     name: 'Pro',
-    priceUsd: 39.99,
+    priceUsd: 34.99,
     tagline: 'El favorito de los estudios en marcha',
     highlight: true,
     features: [
-      'Alumnos ilimitados',
-      'Hasta 5 coaches',
       'Todo lo del plan Inicio',
+      'Alumnos ilimitados',
+      'Hasta 8 coaches',
       'White label (tu propia marca y colores)',
       'Gamificación y recompensas',
       'Servicios opcionales',
       'Reportes de ingresos y asistencia',
+      'Página pública informativa (QR)',
     ],
   },
   {
     id: 'premium',
     name: 'Premium',
-    priceUsd: 79.99,
+    priceUsd: 84.99,
     tagline: 'Para estudios en pleno crecimiento',
     features: [
       'Todo lo del plan Pro',
