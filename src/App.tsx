@@ -7,6 +7,7 @@ import type { Role } from './lib/types';
 import AppShell from './components/layout/AppShell';
 // Los "gates" (verificaciones de pago/estado) son ligeros y se cargan de una vez.
 import SubscriptionGate from './features/admin/SubscriptionGate';
+import PlanGate from './features/admin/PlanGate';
 import CoachGate from './features/coach/CoachGate';
 
 // Cada pantalla se carga bajo demanda (code-splitting) para aligerar la carga
@@ -143,10 +144,10 @@ export default function App() {
       <Route path="/admin/classes" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><ClassesManagement /></SubscriptionGate></RequireRole>} />
       <Route path="/admin/packages" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><PackageManagement /></SubscriptionGate></RequireRole>} />
       <Route path="/admin/coaches" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><CoachesAdmin /></SubscriptionGate></RequireRole>} />
-      <Route path="/admin/rewards" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><RewardsAdmin /></SubscriptionGate></RequireRole>} />
-      <Route path="/admin/services" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><ServicesConfig /></SubscriptionGate></RequireRole>} />
-      <Route path="/admin/whatsapp" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><WhatsappAgent /></SubscriptionGate></RequireRole>} />
-      <Route path="/admin/reports" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><Reports /></SubscriptionGate></RequireRole>} />
+      <Route path="/admin/rewards" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><PlanGate capability="rewards"><RewardsAdmin /></PlanGate></SubscriptionGate></RequireRole>} />
+      <Route path="/admin/services" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><PlanGate capability="services"><ServicesConfig /></PlanGate></SubscriptionGate></RequireRole>} />
+      <Route path="/admin/whatsapp" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><PlanGate capability="whatsapp"><WhatsappAgent /></PlanGate></SubscriptionGate></RequireRole>} />
+      <Route path="/admin/reports" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><PlanGate capability="reports"><Reports /></PlanGate></SubscriptionGate></RequireRole>} />
       <Route path="/admin/reminders" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate><Reminders /></SubscriptionGate></RequireRole>} />
       {/* Suscripción siempre accesible (allow) para poder regularizar el pago. */}
       <Route path="/admin/subscription" element={<RequireRole role="STUDIO_ADMIN"><SubscriptionGate allow><SubscriptionScreen /></SubscriptionGate></RequireRole>} />
