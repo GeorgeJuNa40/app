@@ -11,7 +11,7 @@ import type { Branding, StudioInfoPage } from '../../lib/types';
 // Configuración: datos del negocio, fotos y White-label (branding).
 // Los cambios se guardan SOLO al tocar "Guardar cambios" (no en automático).
 export default function Settings() {
-  const { currentStudio, updateStudio, updateBranding } = useStore();
+  const { currentStudio, updateStudio, updateBranding, can } = useStore();
   const s = currentStudio!;
   const fonts = ['Inter', 'Georgia', 'Poppins', 'system-ui'];
 
@@ -124,29 +124,39 @@ export default function Settings() {
           )}
         </Card>
 
-        {/* White-label */}
-        <Card className="p-6 space-y-4">
-          <h2 className="font-semibold text-ink">White-label (branding)</h2>
-          <ColorField label="Color primario" value={b.primaryColor} onChange={(v) => setBrand({ primaryColor: v })} />
-          <ColorField label="Color secundario (fondo)" value={b.secondaryColor} onChange={(v) => setBrand({ secondaryColor: v })} />
-          <ColorField label="Color de acento / texto" value={b.accentColor} onChange={(v) => setBrand({ accentColor: v })} />
-          <Field label="Tipografía">
-            <select className="input" value={b.fontFamily} onChange={(e) => setBrand({ fontFamily: e.target.value })}>
-              {fonts.map((f) => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </Field>
-        </Card>
+        {/* White-label — función del plan Pro */}
+        {can('whitelabel') ? (
+          <>
+            <Card className="p-6 space-y-4">
+              <h2 className="font-semibold text-ink">White-label (branding)</h2>
+              <ColorField label="Color primario" value={b.primaryColor} onChange={(v) => setBrand({ primaryColor: v })} />
+              <ColorField label="Color secundario (fondo)" value={b.secondaryColor} onChange={(v) => setBrand({ secondaryColor: v })} />
+              <ColorField label="Color de acento / texto" value={b.accentColor} onChange={(v) => setBrand({ accentColor: v })} />
+              <Field label="Tipografía">
+                <select className="input" value={b.fontFamily} onChange={(e) => setBrand({ fontFamily: e.target.value })}>
+                  {fonts.map((f) => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </Field>
+            </Card>
 
-        {/* Vista previa White-label */}
-        <Card className="p-6">
-          <p className="text-xs uppercase text-ink-faint mb-3">Vista previa</p>
-          <div className="rounded-2xl p-6 border" style={{ background: b.secondaryColor, borderColor: b.primaryColor }}>
-            <p className="text-2xl font-black" style={{ color: b.primaryColor, fontFamily: b.fontFamily }}>{b.logoText}</p>
-            <p className="mt-2" style={{ color: b.accentColor, fontFamily: b.fontFamily }}>Encuentra tu equilibrio. Reserva tu próxima clase.</p>
-            <button className="mt-4 rounded-xl px-4 py-2 text-sm font-semibold" style={{ background: b.primaryColor, color: b.secondaryColor }}>Reservar clase</button>
-          </div>
-          <p className="mt-4 text-sm text-ink-faint">Los cambios se aplican a toda la interfaz cuando tocas <strong>Guardar cambios</strong>.</p>
-        </Card>
+            {/* Vista previa White-label */}
+            <Card className="p-6">
+              <p className="text-xs uppercase text-ink-faint mb-3">Vista previa</p>
+              <div className="rounded-2xl p-6 border" style={{ background: b.secondaryColor, borderColor: b.primaryColor }}>
+                <p className="text-2xl font-black" style={{ color: b.primaryColor, fontFamily: b.fontFamily }}>{b.logoText}</p>
+                <p className="mt-2" style={{ color: b.accentColor, fontFamily: b.fontFamily }}>Encuentra tu equilibrio. Reserva tu próxima clase.</p>
+                <button className="mt-4 rounded-xl px-4 py-2 text-sm font-semibold" style={{ background: b.primaryColor, color: b.secondaryColor }}>Reservar clase</button>
+              </div>
+              <p className="mt-4 text-sm text-ink-faint">Los cambios se aplican a toda la interfaz cuando tocas <strong>Guardar cambios</strong>.</p>
+            </Card>
+          </>
+        ) : (
+          <LockedFeature
+            title="White-label (tu marca y colores)"
+            plan="Pro"
+            desc="Personaliza los colores y la tipografía de toda la app con tu marca."
+          />
+        )}
 
         {/* Reservas y cancelación */}
         <Card className="p-6 lg:col-span-2 space-y-4">
@@ -200,14 +210,22 @@ export default function Settings() {
           </div>
         </Card>
 
-        {/* Página informativa pública (opcional — la llena el estudio) */}
-        <InfoPageEditor
-          value={b.infoPage ?? {}}
-          ceuCode={s.ceuCode}
-          onChange={(patch: Partial<StudioInfoPage>) =>
-            setBrand({ infoPage: { ...(b.infoPage ?? {}), ...patch } })
-          }
-        />
+        {/* Página informativa pública (opcional — la llena el estudio) — plan Pro */}
+        {can('publicInfo') ? (
+          <InfoPageEditor
+            value={b.infoPage ?? {}}
+            ceuCode={s.ceuCode}
+            onChange={(patch: Partial<StudioInfoPage>) =>
+              setBrand({ infoPage: { ...(b.infoPage ?? {}), ...patch } })
+            }
+          />
+        ) : (
+          <LockedFeature
+            title="Página pública informativa"
+            plan="Pro"
+            desc="Publica una página con la info de tu estudio y su propio QR/link."
+          />
+        )}
       </div>
 
       {/* Barra de guardado (los cambios NO se aplican hasta tocar Guardar) */}
@@ -248,5 +266,26 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="mb-1 block text-sm font-medium text-ink-soft">{label}</span>
       {children}
     </label>
+  );
+}
+
+// Aviso compacto para una función que el plan actual no incluye.
+function LockedFeature({ title, plan, desc }: { title: string; plan: string; desc: string }) {
+  return (
+    <Card className="p-6">
+      <div className="flex items-start gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-100 text-lg">✦</div>
+        <div>
+          <p className="font-semibold text-ink">{title}</p>
+          <p className="mt-1 text-sm text-ink-soft">{desc}</p>
+          <p className="mt-2 text-sm">
+            <span className="rounded-full bg-cream-dark/60 px-2 py-0.5 text-xs font-semibold text-ink-soft">
+              Disponible en el plan {plan}
+            </span>{' '}
+            <a href="#/admin/subscription" className="font-medium text-brand">Ver planes ↗</a>
+          </p>
+        </div>
+      </div>
+    </Card>
   );
 }
