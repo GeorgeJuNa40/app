@@ -25,7 +25,7 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
 const APP_URL = (Deno.env.get('APP_URL') ?? '').replace(/\/$/, '');
 
 // Precios mensuales de los planes del estudio (en centavos de USD).
-const PLAN_PRICES: Record<string, number> = { inicio: 1999, pro: 3999, premium: 7999 };
+const PLAN_PRICES: Record<string, number> = { inicio: 2499, pro: 3499, premium: 8499 };
 
 // -------- Comisión de plataforma (Move yA) sobre los pagos en línea de alumnos
 // Se cobra AL ESTUDIO: sale de su parte del cargo directo (no se le suma al
@@ -138,8 +138,10 @@ Deno.serve(async (req) => {
           // application_fee_amount: parte que se transfiere de la cuenta del
           // estudio a la plataforma (Move yA). Solo se agrega si hay comisión.
           ...(fee > 0 ? { payment_intent_data: { application_fee_amount: fee } } : {}),
-          success_url: `${APP_URL}/?pago=exito`,
-          cancel_url: `${APP_URL}/?pago=cancelado`,
+          // Al volver de Stripe, regresa DIRECTO a la pantalla del alumno (con
+          // hash de la ruta) en vez de la raíz (que mandaba al login/dashboard).
+          success_url: `${APP_URL}/?pago=exito#/app/packages`,
+          cancel_url: `${APP_URL}/?pago=cancelado#/app/packages`,
           metadata: {
             kind: 'package',
             user_id: me.id,
@@ -171,8 +173,10 @@ Deno.serve(async (req) => {
             },
           },
         ],
-        success_url: `${APP_URL}/?suscripcion=exito`,
-        cancel_url: `${APP_URL}/?suscripcion=cancelado`,
+        // Al volver de Stripe, regresa DIRECTO a la pantalla de Suscripción del
+        // estudio (con hash de la ruta) en vez de la raíz (que mandaba al login).
+        success_url: `${APP_URL}/?suscripcion=exito#/admin/subscription`,
+        cancel_url: `${APP_URL}/?suscripcion=cancelado#/admin/subscription`,
         metadata: { kind: 'subscription', studio_id: me.studio_id, plan },
       });
       return json({ url: session.url });

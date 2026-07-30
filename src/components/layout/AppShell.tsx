@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useStore } from '../../lib/store';
 import type { Role } from '../../lib/types';
+import type { PlanCapability } from '../../lib/plans';
 import Avatar from '../Avatar';
 import ImageUpload from '../ImageUpload';
 import InstallAppButton from '../InstallAppButton';
@@ -13,6 +14,7 @@ interface NavItem {
   to: string;
   label: string;
   icon: string;
+  cap?: PlanCapability; // si se define, solo se muestra si el plan la incluye
 }
 
 // Rutas de navegación principales por rol.
@@ -25,10 +27,10 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { to: '/admin/classes', label: 'Clases', icon: '◉' },
     { to: '/admin/packages', label: 'Paquetes', icon: '❏' },
     { to: '/admin/coaches', label: 'Coaches', icon: '⚐' },
-    { to: '/admin/rewards', label: 'Recompensas', icon: '★' },
-    { to: '/admin/services', label: 'Servicios', icon: '✚' },
-    { to: '/admin/whatsapp', label: 'WhatsApp IA', icon: '✆' },
-    { to: '/admin/reports', label: 'Reportes', icon: '▤' },
+    { to: '/admin/rewards', label: 'Recompensas', icon: '★', cap: 'rewards' },
+    { to: '/admin/services', label: 'Servicios', icon: '✚', cap: 'services' },
+    { to: '/admin/whatsapp', label: 'WhatsApp IA', icon: '✆', cap: 'whatsapp' },
+    { to: '/admin/reports', label: 'Reportes', icon: '▤', cap: 'reports' },
     { to: '/admin/subscription', label: 'Suscripción', icon: '✦' },
     { to: '/admin/settings', label: 'Configuración', icon: '⚙' },
   ],
@@ -54,12 +56,13 @@ const ROLE_LABEL: Record<Role, string> = {
 };
 
 export default function AppShell({ children }: { children: ReactNode }) {
-  const { currentUser, currentStudio, logout, updateUserAvatar } = useStore();
+  const { currentUser, currentStudio, logout, updateUserAvatar, can } = useStore();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   if (!currentUser || !currentStudio) return null;
-  const nav = NAV_BY_ROLE[currentUser.role];
+  // Oculta del menú las funciones que el plan del estudio no incluye.
+  const nav = NAV_BY_ROLE[currentUser.role].filter((item) => !item.cap || can(item.cap));
 
   const handleLogout = () => {
     logout();
