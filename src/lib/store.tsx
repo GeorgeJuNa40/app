@@ -26,7 +26,7 @@ import type {
   WhatsappConfig,
   WhatsappTemplate,
 } from './types';
-import { getPlan } from './plans';
+import { getPlan, planHas, type PlanCapability } from './plans';
 import { setActiveCurrency } from './format';
 import { notifyError, setResyncHandler } from './notify';
 import type { Session } from '@supabase/supabase-js';
@@ -142,6 +142,9 @@ interface StoreValue {
   subscribeToPlan: (plan: PlanId) => void;
   markSubscriptionPaid: () => void;
   setSubscriptionPastDue: () => void;
+  // Plan actual del estudio y control de funciones por plan.
+  plan: PlanId;
+  can: (cap: PlanCapability) => boolean;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -326,11 +329,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     void dbUpdate('user_packages', activePkg.id, { credits_used: activePkg.creditsUsed + 1 });
   };
 
+  // Plan vigente del estudio (por defecto el más limitado si aún no hay dato).
+  const plan: PlanId = currentStudio?.subscription?.plan ?? 'inicio';
+
   const value: StoreValue = {
     db,
     currentUser,
     currentStudio,
     authLoading,
+    plan,
+    can: (cap) => planHas(plan, cap),
 
     async signUp(input) {
       const { error } = await supabase.auth.signUp({
