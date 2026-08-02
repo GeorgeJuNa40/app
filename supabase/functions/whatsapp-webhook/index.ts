@@ -5,27 +5,16 @@
 // responde automáticamente (el "bot"). Meta (WhatsApp Cloud API) llama a esta
 // función cada vez que llega un mensaje.
 //
-// Dos partes:
-//   - GET  -> "handshake" de verificación que hace Meta al configurar el webhook
-//             (responde el hub.challenge si el verify_token coincide).
-//   - POST -> mensaje entrante: genera una respuesta y la envía por WhatsApp.
+// Secrets requeridos en Supabase (Settings → Edge Functions → Secrets):
+//   WHATSAPP_VERIFY_TOKEN  -> palabra secreta que TÚ inventas (la misma de Meta).
+//   WHATSAPP_TOKEN         -> token de acceso de WhatsApp (para poder enviar).
 //
-// Requiere estos "secrets" en Supabase (Settings → Edge Functions → Secrets):
-//   WHATSAPP_VERIFY_TOKEN  -> una palabra secreta que TÚ inventas (la misma que
-//                             pondrás en Meta al configurar el webhook).
-//   WHATSAPP_TOKEN         -> el token de acceso de WhatsApp (para poder enviar).
-//                             En pruebas es el token temporal (24 h) de Meta.
+// IMPORTANTE: despliega con "Verify JWT" DESACTIVADO.
 //
-// IMPORTANTE: despliega esta función con "Verify JWT" DESACTIVADO (Meta no envía
-// un JWT de usuario; la seguridad la da el verify token y, opcionalmente, la
-// firma del webhook).
-//
-// NOTA: por ahora el bot responde con reglas simples (saludos, horarios, pagos).
-// En el siguiente paso lo conectamos a la base de conocimiento de cada estudio
-// y a la IA (Claude) para respuestas de verdad.
+// Esta versión escribe LOGS detallados para diagnosticar: verás en los logs
+// cada POST que llega, el mensaje, y la respuesta de la API de WhatsApp.
 // ============================================================================
 
-// Versión del Graph API de Meta (si algún día Meta pide otra, se cambia aquí).
 const GRAPH = 'https://graph.facebook.com/v21.0';
 const VERIFY_TOKEN = Deno.env.get('WHATSAPP_VERIFY_TOKEN') ?? '';
 const WHATSAPP_TOKEN = Deno.env.get('WHATSAPP_TOKEN') ?? '';
@@ -38,8 +27,8 @@ Deno.serve(async (req) => {
     const mode = url.searchParams.get('hub.mode');
     const token = url.searchParams.get('hub.verify_token');
     const challenge = url.searchParams.get('hub.challenge');
+    console.log('🔎 GET verificación:', { mode, tokenOk: token === VERIFY_TOKEN });
     if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-      // Devolvemos el challenge tal cual para que Meta valide el webhook.
       return new Response(challenge ?? '', { status: 200 });
     }
     return new Response('Forbidden', { status: 403 });
@@ -47,42 +36,49 @@ Deno.serve(async (req) => {
 
   // -------- 2) Mensajes entrantes (POST).
   if (req.method === 'POST') {
+    const raw = await req.text();
+    // Log SIEMPRE que llega un POST (así sabemos si Meta nos está llamando).
+    console.log('📩 POST recibido:', raw.slice(0, 800));
+
     let body: Record<string, unknown> = {};
     try {
-      body = await req.json();
+      body = JSON.parse(raw);
     } catch {
-      /* cuerpo vacío o no-JSON: lo ignoramos */
+      console.log('⚠️ POST sin JSON válido');
     }
 
     try {
-      // Estructura del webhook de WhatsApp: entry[0].changes[0].value
       // deno-lint-ignore no-explicit-any
       const value = (body as any)?.entry?.[0]?.changes?.[0]?.value;
       const msg = value?.messages?.[0];
       const phoneNumberId = value?.metadata?.phone_number_id;
 
-      // Solo respondemos a mensajes de texto (ignoramos recibos de entrega, etc.)
-      if (msg && msg.type === 'text' && phoneNumberId && WHATSAPP_TOKEN) {
+      if (msg && msg.type === 'text' && phoneNumberId) {
         const from = msg.from as string;
         const text = (msg.text?.body as string) ?? '';
-        const reply = botReply(text);
-        await sendText(phoneNumberId, from, reply);
+        console.log(`💬 Mensaje de ${from}: "${text}" (phone_number_id=${phoneNumberId})`);
+
+        if (!WHATSAPP_TOKEN) {
+          console.error('⚠️ Falta el secret WHATSAPP_TOKEN — no puedo responder.');
+        } else {
+          const reply = botReply(text);
+          await sendText(phoneNumberId, from, reply);
+        }
+      } else {
+        console.log('ℹ️ POST sin mensaje de texto (probablemente un status/recibo).');
       }
     } catch (e) {
-      // No fallamos hacia Meta: registramos y devolvemos 200 igual, para que
-      // WhatsApp no reintente el mismo evento una y otra vez.
-      console.error('whatsapp-webhook error:', (e as Error).message);
+      console.error('❌ Error procesando el mensaje:', (e as Error).message);
     }
 
-    // Responder 200 rápido es obligatorio (si no, Meta reintenta el evento).
     return new Response('EVENT_RECEIVED', { status: 200 });
   }
 
   return new Response('Method not allowed', { status: 405 });
 });
 
-// Envía un mensaje de texto por la Cloud API de WhatsApp. Solo se permite texto
-// libre dentro de las 24 h de que el usuario escribió (que es justo este caso).
+// Envía un mensaje de texto por la Cloud API de WhatsApp y SIEMPRE registra la
+// respuesta de la API (para ver si funcionó o qué error da).
 async function sendText(phoneNumberId: string, to: string, bodyText: string) {
   const res = await fetch(`${GRAPH}/${phoneNumberId}/messages`, {
     method: 'POST',
@@ -97,13 +93,16 @@ async function sendText(phoneNumberId: string, to: string, bodyText: string) {
       text: { body: bodyText },
     }),
   });
-  if (!res.ok) {
-    console.error('Error al enviar WhatsApp:', res.status, await res.text());
+  const txt = await res.text();
+  if (res.ok) {
+    console.log('✅ WhatsApp aceptó el envío:', txt.slice(0, 300));
+  } else {
+    console.error('❌ WhatsApp rechazó el envío:', res.status, txt.slice(0, 400));
   }
 }
 
-// Bot simple por reglas (respuesta de arranque). En el siguiente paso esto se
-// reemplaza por la base de conocimiento del estudio + IA (Claude).
+// Bot simple por reglas (respuesta de arranque). Luego lo cambiamos por la base
+// de conocimiento del estudio + IA (Claude).
 function botReply(question: string): string {
   const q = question.toLowerCase();
   if (/hola|buenas|buenos|hey|qué tal|que tal/.test(q))
