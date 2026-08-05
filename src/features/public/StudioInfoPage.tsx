@@ -42,7 +42,7 @@ export default function StudioInfoPage() {
   }, [ceu]);
 
   useEffect(() => {
-    QRCode.toDataURL(registerLink, { width: 320, margin: 1, color: { dark: '#2D5A4C', light: '#ffffff' } })
+    QRCode.toDataURL(registerLink, { width: 320, margin: 1, color: { dark: '#4A5D55', light: '#ffffff' } })
       .then(setRegQr)
       .catch(() => setRegQr(''));
   }, [registerLink]);
@@ -68,7 +68,7 @@ export default function StudioInfoPage() {
 
   const b = studio.branding ?? ({} as Branding);
   const info: StudioInfoPage = b.infoPage ?? {};
-  const primary = b.primaryColor ?? '#2D5A4C';
+  const primary = b.primaryColor ?? '#4A5D55';
   const cream = b.secondaryColor ?? '#F4F1EA';
 
   return (

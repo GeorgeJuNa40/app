@@ -91,7 +91,7 @@ function InviteBlock({
     QRCode.toDataURL(link, {
       width: 320,
       margin: 1,
-      color: { dark: '#2D5A4C', light: '#ffffff' },
+      color: { dark: '#4A5D55', light: '#ffffff' },
     })
       .then(setQr)
       .catch(() => setQr(''));

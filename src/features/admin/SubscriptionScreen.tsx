@@ -80,7 +80,7 @@ export default function SubscriptionScreen() {
       {!active && !inTrial && (
         <div
           className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl p-5 text-cream shadow-zen"
-          style={{ background: 'linear-gradient(135deg, #2D5A4C, #1E3E33)' }}
+          style={{ background: 'linear-gradient(135deg, #4A5D55, #3A4A43)' }}
         >
           <div>
             <p className="text-xs uppercase tracking-wide opacity-80">Oferta de bienvenida</p>

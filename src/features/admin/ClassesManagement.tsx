@@ -10,7 +10,7 @@ const emptyDraft = (studioId: string): ClassTemplate => ({
   studioId,
   name: '',
   durationMin: 50,
-  colorHex: '#2D5A4C',
+  colorHex: '#4A5D55',
   photoUrl: '',
 });
 
