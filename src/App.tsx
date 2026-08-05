@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, type ComponentType } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useStore } from './lib/store';
 import { isSupabaseConfigured } from './lib/supabase';
@@ -12,36 +12,65 @@ import CoachGate from './features/coach/CoachGate';
 
 // Cada pantalla se carga bajo demanda (code-splitting) para aligerar la carga
 // inicial: el navegador solo descarga el código de la sección que se abre.
-const OnboardingScreen = lazy(() => import('./features/onboarding/OnboardingScreen'));
+//
+// lazyWithReload: si un "chunk" quedó obsoleto tras un nuevo despliegue (su
+// archivo con hash ya no existe en el servidor), la descarga falla y la pantalla
+// quedaría en blanco. En ese caso recargamos la página UNA sola vez para obtener
+// la versión nueva — el usuario ya no tiene que recargar a mano.
+function lazyWithReload<T extends ComponentType<unknown>>(
+  factory: () => Promise<{ default: T }>,
+) {
+  const KEY = 'chunk-reload-once';
+  return lazy(async () => {
+    try {
+      const mod = await factory();
+      // Carga exitosa: limpiamos la bandera para futuros despliegues.
+      sessionStorage.removeItem(KEY);
+      return mod;
+    } catch (err) {
+      // Si aún no recargamos por este motivo, recargamos una vez.
+      if (!sessionStorage.getItem(KEY)) {
+        sessionStorage.setItem(KEY, '1');
+        window.location.reload();
+        // Devuelve una promesa que nunca resuelve: la recarga toma el control.
+        return new Promise<{ default: T }>(() => {});
+      }
+      // Si ya recargamos y sigue fallando, es un error real: se propaga.
+      throw err;
+    }
+  });
+}
+
+const OnboardingScreen = lazyWithReload(() => import('./features/onboarding/OnboardingScreen'));
 // Página pública informativa del estudio (sin login).
-const StudioInfoPage = lazy(() => import('./features/public/StudioInfoPage'));
+const StudioInfoPage = lazyWithReload(() => import('./features/public/StudioInfoPage'));
 // Página pública de política de privacidad (sin login) — para publicar en Meta.
-const PrivacyPolicy = lazy(() => import('./features/public/PrivacyPolicy'));
+const PrivacyPolicy = lazyWithReload(() => import('./features/public/PrivacyPolicy'));
 
-const AdminDashboard = lazy(() => import('./features/admin/AdminDashboard'));
-const MembersCRM = lazy(() => import('./features/admin/MembersCRM'));
-const CalendarAdmin = lazy(() => import('./features/admin/CalendarAdmin'));
-const ClassesManagement = lazy(() => import('./features/admin/ClassesManagement'));
-const PackageManagement = lazy(() => import('./features/admin/PackageManagement'));
-const CoachesAdmin = lazy(() => import('./features/admin/CoachesAdmin'));
-const RewardsAdmin = lazy(() => import('./features/admin/RewardsAdmin'));
-const ServicesConfig = lazy(() => import('./features/admin/ServicesConfig'));
-const WhatsappAgent = lazy(() => import('./features/admin/WhatsappAgent'));
-const Reports = lazy(() => import('./features/admin/Reports'));
-const Reminders = lazy(() => import('./features/admin/Reminders'));
-const SubscriptionScreen = lazy(() => import('./features/admin/SubscriptionScreen'));
-const Settings = lazy(() => import('./features/admin/Settings'));
+const AdminDashboard = lazyWithReload(() => import('./features/admin/AdminDashboard'));
+const MembersCRM = lazyWithReload(() => import('./features/admin/MembersCRM'));
+const CalendarAdmin = lazyWithReload(() => import('./features/admin/CalendarAdmin'));
+const ClassesManagement = lazyWithReload(() => import('./features/admin/ClassesManagement'));
+const PackageManagement = lazyWithReload(() => import('./features/admin/PackageManagement'));
+const CoachesAdmin = lazyWithReload(() => import('./features/admin/CoachesAdmin'));
+const RewardsAdmin = lazyWithReload(() => import('./features/admin/RewardsAdmin'));
+const ServicesConfig = lazyWithReload(() => import('./features/admin/ServicesConfig'));
+const WhatsappAgent = lazyWithReload(() => import('./features/admin/WhatsappAgent'));
+const Reports = lazyWithReload(() => import('./features/admin/Reports'));
+const Reminders = lazyWithReload(() => import('./features/admin/Reminders'));
+const SubscriptionScreen = lazyWithReload(() => import('./features/admin/SubscriptionScreen'));
+const Settings = lazyWithReload(() => import('./features/admin/Settings'));
 
-const CoachDashboard = lazy(() => import('./features/coach/CoachDashboard'));
-const CoachCalendar = lazy(() => import('./features/coach/CoachCalendar'));
-const CoachProfile = lazy(() => import('./features/coach/CoachProfile'));
+const CoachDashboard = lazyWithReload(() => import('./features/coach/CoachDashboard'));
+const CoachCalendar = lazyWithReload(() => import('./features/coach/CoachCalendar'));
+const CoachProfile = lazyWithReload(() => import('./features/coach/CoachProfile'));
 
-const StudentDashboard = lazy(() => import('./features/student/StudentDashboard'));
-const BookClasses = lazy(() => import('./features/student/BookClasses'));
-const MyPackages = lazy(() => import('./features/student/MyPackages'));
-const Rewards = lazy(() => import('./features/student/Rewards'));
-const OptionalServices = lazy(() => import('./features/student/OptionalServices'));
-const StudentCoaches = lazy(() => import('./features/student/StudentCoaches'));
+const StudentDashboard = lazyWithReload(() => import('./features/student/StudentDashboard'));
+const BookClasses = lazyWithReload(() => import('./features/student/BookClasses'));
+const MyPackages = lazyWithReload(() => import('./features/student/MyPackages'));
+const Rewards = lazyWithReload(() => import('./features/student/Rewards'));
+const OptionalServices = lazyWithReload(() => import('./features/student/OptionalServices'));
+const StudentCoaches = lazyWithReload(() => import('./features/student/StudentCoaches'));
 
 // Pantalla de carga mientras se descarga el código de una sección.
 function Splash() {
