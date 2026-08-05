@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 // ---------------------------------------------------------------------------
-// Primitivas UI compartidas — estilo "Zen Balance" (minimalista, wellness).
+// Primitivas UI compartidas — estilo "Premium Zen Tech" (minimalista, wellness).
 // ---------------------------------------------------------------------------
 
 // Modal accesible: cierra con Esc o al hacer clic fuera; marca role="dialog".
@@ -43,14 +43,17 @@ export function Button({
   className = '',
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'accent';
 }) {
+  // Botones tipo "píldora" (Premium Zen Tech): grandes para el pulgar, con
+  // sombras suaves y una micro-elevación al pasar/tocar.
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none';
   const styles: Record<string, string> = {
-    primary: 'bg-brand text-cream hover:opacity-90 shadow-zen',
-    secondary: 'bg-cream-dark text-ink hover:bg-cream',
-    ghost: 'bg-transparent text-brand hover:bg-cream-dark',
+    primary: 'bg-brand text-cream-light shadow-card hover:shadow-zen hover:-translate-y-0.5 active:translate-y-0',
+    accent: 'bg-mint text-ink shadow-card hover:bg-mint-dark hover:text-white hover:-translate-y-0.5',
+    secondary: 'bg-brand-soft text-brand-soft hover:brightness-95',
+    ghost: 'bg-transparent text-brand hover:bg-brand-soft',
     danger: 'bg-red-50 text-red-700 hover:bg-red-100',
   };
   return (
@@ -67,9 +70,10 @@ export function Card({
   children: ReactNode;
   className?: string;
 }) {
+  // Tarjetas con bordes redondeados suaves y sombra difusa (sin bordes duros).
   return (
     <div
-      className={`rounded-2xl bg-white border border-cream-dark shadow-sm ${className}`}
+      className={`rounded-2xl bg-white shadow-card ring-1 ring-black/[0.04] ${className}`}
     >
       {children}
     </div>
@@ -112,13 +116,17 @@ export function StatCard({
 }) {
   return (
     <Card className="p-5">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-wide text-ink-faint">{label}</p>
-          <p className="mt-2 text-2xl font-bold text-ink">{value}</p>
+          <p className="mt-2 text-3xl font-bold text-ink">{value}</p>
           {hint && <p className="mt-1 text-xs text-ink-faint">{hint}</p>}
         </div>
-        {icon && <div className="text-2xl text-brand">{icon}</div>}
+        {icon && (
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-soft text-xl text-brand">
+            {icon}
+          </div>
+        )}
       </div>
     </Card>
   );
@@ -172,7 +180,7 @@ export function PageHeader({
   return (
     <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
       <div>
-        <h1 className="text-2xl font-bold text-ink">{title}</h1>
+        <h1 className="text-3xl font-black tracking-tight text-ink">{title}</h1>
         {subtitle && <p className="text-ink-faint mt-1">{subtitle}</p>}
       </div>
       {action}
