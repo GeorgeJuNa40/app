@@ -15,6 +15,8 @@ import CoachGate from './features/coach/CoachGate';
 const OnboardingScreen = lazy(() => import('./features/onboarding/OnboardingScreen'));
 // Página pública informativa del estudio (sin login).
 const StudioInfoPage = lazy(() => import('./features/public/StudioInfoPage'));
+// Página pública de política de privacidad (sin login) — para publicar en Meta.
+const PrivacyPolicy = lazy(() => import('./features/public/PrivacyPolicy'));
 
 const AdminDashboard = lazy(() => import('./features/admin/AdminDashboard'));
 const MembersCRM = lazy(() => import('./features/admin/MembersCRM'));
@@ -114,6 +116,8 @@ export default function App() {
     <Routes>
       {/* Página informativa PÚBLICA del estudio (sin login). */}
       <Route path="/info/:ceu" element={<StudioInfoPage />} />
+      {/* Política de privacidad PÚBLICA (sin login) — requerida para publicar en Meta. */}
+      <Route path="/privacy" element={<PrivacyPolicy />} />
 
       {/* Onboarding: pantalla de inicio con CEU. Si ya hay sesión, redirige. */}
       <Route
