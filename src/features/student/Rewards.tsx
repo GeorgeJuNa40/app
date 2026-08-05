@@ -19,7 +19,7 @@ export default function Rewards() {
       <PageHeader title="Recompensas" subtitle="Gana estrellas por asistir y canjéalas" />
 
       {/* Balance destacado */}
-      <Card className="p-6 mb-8 bg-forest text-cream">
+      <Card className="p-6 mb-8 bg-brand text-cream">
         <p className="text-sm opacity-80">Tu saldo de estrellas</p>
         <p className="mt-1 text-5xl font-black">★ {balance}</p>
         <p className="mt-2 text-sm opacity-80">

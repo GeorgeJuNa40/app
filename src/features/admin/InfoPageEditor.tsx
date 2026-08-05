@@ -22,7 +22,7 @@ export default function InfoPageEditor({
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    QRCode.toDataURL(publicLink, { width: 320, margin: 1, color: { dark: '#2D5A4C', light: '#ffffff' } })
+    QRCode.toDataURL(publicLink, { width: 320, margin: 1, color: { dark: '#4A5D55', light: '#ffffff' } })
       .then(setQr)
       .catch(() => setQr(''));
   }, [publicLink]);
