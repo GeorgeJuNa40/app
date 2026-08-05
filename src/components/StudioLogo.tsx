@@ -14,12 +14,18 @@ export default function StudioLogo({
   showName?: boolean;
 }) {
   if (branding.logoUrl) {
+    // Forma del logo: círculo (recorta a redondo) o cuadrado con esquinas
+    // redondeadas (por defecto). Los logos circulares quedan circulares.
+    const shapeCls =
+      branding.logoShape === 'circle'
+        ? 'rounded-full object-cover aspect-square'
+        : 'rounded-lg object-contain';
     return (
       <span className="inline-flex items-center gap-2 min-w-0">
         <img
           src={branding.logoUrl}
           alt={branding.logoText}
-          className={`object-contain shrink-0 ${imgClass}`}
+          className={`shrink-0 ${shapeCls} ${imgClass}`}
         />
         {showName && <span className={`truncate ${textClass}`}>{branding.logoText}</span>}
       </span>

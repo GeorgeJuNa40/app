@@ -13,7 +13,27 @@ import type { Branding, StudioInfoPage } from '../../lib/types';
 export default function Settings() {
   const { currentStudio, updateStudio, updateBranding, can } = useStore();
   const s = currentStudio!;
-  const fonts = ['Inter', 'Georgia', 'Poppins', 'system-ui'];
+  // Tipografías disponibles (cargadas en index.html). El estudio elige la suya.
+  const fonts = [
+    'Inter',
+    'Poppins',
+    'Montserrat',
+    'Nunito',
+    'Lato',
+    'Work Sans',
+    'DM Sans',
+    'Quicksand',
+    'Raleway',
+    'Rubik',
+    'Manrope',
+    'Josefin Sans',
+    'Comfortaa',
+    'Playfair Display',
+    'Merriweather',
+    'Lora',
+    'Georgia',
+    'system-ui',
+  ];
 
   // Borrador local: aquí viven los cambios hasta que se guardan.
   const makeDraft = () => ({
@@ -85,6 +105,33 @@ export default function Settings() {
               )}
             </div>
             <p className="mt-1 text-xs text-ink-faint">Se muestra en la barra lateral y el encabezado, visible para admin, coaches y alumnos.</p>
+            {b.logoUrl && (
+              <div className="mt-3">
+                <span className="mb-1 block text-sm font-medium text-ink-soft">Forma del logo</span>
+                <div className="flex gap-2">
+                  {([
+                    { v: 'rounded', label: 'Cuadrado redondeado' },
+                    { v: 'circle', label: 'Círculo' },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      onClick={() => setBrand({ logoShape: opt.v })}
+                      className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                        (b.logoShape ?? 'rounded') === opt.v
+                          ? 'bg-brand text-cream-light'
+                          : 'bg-cream-dark text-ink-soft hover:bg-cream'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-ink-faint">
+                  Si tu logo es cuadrado, "redondeado" le suaviza las esquinas. Si es circular, elige "Círculo".
+                </p>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Teléfono"><input className="input" value={draft.phone} onChange={(e) => setStudio({ phone: e.target.value })} /></Field>
@@ -134,7 +181,11 @@ export default function Settings() {
               <ColorField label="Color de acento / texto" value={b.accentColor} onChange={(v) => setBrand({ accentColor: v })} />
               <Field label="Tipografía">
                 <select className="input" value={b.fontFamily} onChange={(e) => setBrand({ fontFamily: e.target.value })}>
-                  {fonts.map((f) => <option key={f} value={f}>{f}</option>)}
+                  {fonts.map((f) => (
+                    <option key={f} value={f} style={{ fontFamily: f }}>
+                      {f}
+                    </option>
+                  ))}
                 </select>
               </Field>
             </Card>

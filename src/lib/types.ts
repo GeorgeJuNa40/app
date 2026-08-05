@@ -34,6 +34,7 @@ export interface Branding {
   fontFamily: string;
   logoText: string;
   logoUrl?: string; // logo del estudio (imagen subida), visible para todos
+  logoShape?: 'rounded' | 'circle'; // forma del logo: cuadrado redondeado (def.) o círculo
   heroPhotoUrl?: string;
   country?: string; // ISO del país del estudio (ej. MX), derivado del registro
   currencyCode?: string; // moneda local del estudio (ej. MXN); default USD
