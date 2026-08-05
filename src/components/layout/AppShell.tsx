@@ -175,10 +175,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // Oculta del menú las funciones que el plan del estudio no incluye.
   const nav = NAV_BY_ROLE[currentUser.role].filter((item) => !item.cap || can(item.cap));
 
-  // Barra inferior (móvil): si hay muchas secciones, mostramos 4 + "Más".
-  const showAll = nav.length <= 5;
-  const primary = showAll ? nav : nav.slice(0, 4);
-  const hasMore = !showAll;
+  // Barra inferior (móvil): mostramos hasta 4 secciones + el botón "Más".
+  // "Más" SIEMPRE aparece: abre el cajón con la cuenta (foto, notificaciones y
+  // Cerrar sesión), así que ningún rol se queda sin poder cerrar sesión.
+  const primary = nav.length <= 4 ? nav : nav.slice(0, 4);
+  const hasMore = true;
 
   const handleLogout = () => {
     logout();
