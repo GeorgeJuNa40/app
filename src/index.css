@@ -4,9 +4,10 @@
 
 :root {
   /* Tokens de white-label — sobrescritos en runtime por el branding del estudio */
-  --brand-primary: #2d5a4c;
-  --brand-secondary: #f4f1ea;
-  --brand-accent: #333333;
+  --brand-primary: #4a5d55; /* Verde Salvia Profundo */
+  --brand-secondary: #faf8f3; /* Crema muy limpio (zen) */
+  --brand-accent: #212121; /* Carbón */
+  --brand-mint: #88b8b7; /* Acento menta/cian */
   --brand-font: 'Inter', system-ui, sans-serif;
 }
 
@@ -36,6 +37,26 @@ body {
 }
 .ring-brand {
   --tw-ring-color: var(--brand-primary);
+}
+/* Versión translúcida del color de marca (fondos suaves, píldoras, halos). */
+.bg-brand-soft {
+  background-color: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+}
+.text-brand-soft {
+  color: color-mix(in srgb, var(--brand-primary) 70%, var(--brand-accent));
+}
+.border-brand-soft {
+  border-color: color-mix(in srgb, var(--brand-primary) 22%, transparent);
+}
+
+/* "Blobs" orgánicos suaves de marca (esquinas), estilo Zen. */
+.brand-blob {
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--brand-primary) 22%, transparent),
+    transparent 70%
+  );
+  pointer-events: none;
 }
 
 /* Scrollbar sutil, coherente con el estilo zen */
