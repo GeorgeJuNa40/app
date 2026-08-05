@@ -22,11 +22,12 @@ import type {
 type Row = Record<string, any>;
 
 const DEFAULT_BRANDING = {
-  primaryColor: '#2D5A4C',
-  secondaryColor: '#F4F1EA',
-  accentColor: '#333333',
+  primaryColor: '#4A5D55',
+  secondaryColor: '#FAF8F3',
+  accentColor: '#212121',
   fontFamily: 'Inter',
   logoText: 'Move yA',
+  logoShape: 'rounded' as const,
 };
 const DEFAULT_WHATSAPP = { number: '', botEnabled: false, templates: [], knowledge: [] };
 const DEFAULT_SUBSCRIPTION = {
