@@ -29,7 +29,7 @@ const DEFAULT_BRANDING = {
   logoText: 'Move yA',
   logoShape: 'rounded' as const,
 };
-const DEFAULT_WHATSAPP = { number: '', botEnabled: false, templates: [], knowledge: [] };
+const DEFAULT_WHATSAPP = { number: '', botEnabled: false, aiActive: false, templates: [], knowledge: [] };
 const DEFAULT_SUBSCRIPTION = {
   status: 'TRIALING',
   plan: 'pro',

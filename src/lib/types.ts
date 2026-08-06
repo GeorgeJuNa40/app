@@ -63,7 +63,11 @@ export interface WhatsappTemplate {
 
 export interface WhatsappConfig {
   number: string; // número del estudio (formato internacional, sin +)
-  botEnabled: boolean;
+  botEnabled: boolean; // interruptor del estudio: prende/apaga su bot
+  // aiActive lo controla la PLATAFORMA (no el estudio). Si está apagado, el bot
+  // responde en "modo básico" (reglas, gratis). Se enciende cuando el estudio
+  // contrata el servicio del bot con IA — así las pruebas no generan costo.
+  aiActive?: boolean;
   templates: WhatsappTemplate[];
   knowledge: string[]; // retro/base de conocimiento para que el bot responda
 }

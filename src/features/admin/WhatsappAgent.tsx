@@ -30,6 +30,18 @@ export default function WhatsappAgent() {
     <>
       <PageHeader title="WhatsApp IA" subtitle="Recordatorios de pago, avisos del estudio y respuestas automáticas del bot" />
 
+      {/* Estado del bot (lo controla la plataforma, no el estudio). */}
+      {wa.aiActive ? (
+        <div className="mb-6 rounded-2xl bg-brand-soft p-4 text-sm text-brand">
+          ✨ <b>Bot con IA activo.</b> Responde a tus alumnos usando la base de conocimiento de tu estudio.
+        </div>
+      ) : (
+        <div className="mb-6 rounded-2xl border border-cream-dark bg-cream-dark/30 p-4 text-sm text-ink-soft">
+          Tu bot está en <b>modo básico</b> (respuestas guía, sin costo). Ya puedes configurar tu número,
+          tus plantillas y tu base de conocimiento. El <b>bot con IA</b> se activa al contratar tu paquete.
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Configuración */}
         <Card className="p-6">

@@ -114,8 +114,10 @@ Deno.serve(async (req) => {
 async function buildReply(studio: Studio | null, text: string): Promise<string> {
   const name = studio?.name ?? 'el estudio';
 
-  // Sin llave de Claude -> bot de reglas (gratis). Este es el modo por defecto.
-  if (!ANTHROPIC_API_KEY || !studio) {
+  // Modo básico (reglas, GRATIS) si: no hay llave de Claude, no se identificó el
+  // estudio, o el estudio aún no tiene la IA activada (p. ej. durante su prueba).
+  // Así las pruebas nunca generan costo — la IA solo corre cuando aiActive = true.
+  if (!ANTHROPIC_API_KEY || !studio || !studio.aiActive) {
     return rulesReply(text, name);
   }
 
@@ -201,6 +203,7 @@ interface Studio {
   id: string;
   name: string;
   botEnabled: boolean;
+  aiActive: boolean; // lo controla la plataforma: IA (con costo) vs reglas (gratis)
   knowledge: string[];
 }
 
@@ -225,6 +228,7 @@ async function findStudioByPhone(displayPhone: string): Promise<Studio | null> {
       id: row.id,
       name: row.name,
       botEnabled: row.whatsapp?.botEnabled ?? true,
+      aiActive: row.whatsapp?.aiActive ?? false,
       knowledge: row.whatsapp?.knowledge ?? [],
     };
   } catch (e) {
