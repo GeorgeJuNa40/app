@@ -117,22 +117,37 @@ async function applyPackage(m: Record<string, string>, s: Stripe.Checkout.Sessio
   });
 }
 
+// Precios mensuales de referencia (informativos) — deben coincidir con plans.ts.
+const PLAN_PRICE_USD: Record<string, number> = { inicio: 24.99, pro: 34.99, premium: 84.99 };
+
 async function applySubscription(m: Record<string, string>, s: Stripe.Checkout.Session) {
   const end = new Date(Date.now() + 30 * DAY);
   const { data: studio } = await admin
     .from('studios')
-    .select('subscription')
+    .select('subscription, whatsapp')
     .eq('id', m.studio_id)
     .single();
+
+  const plan = m.plan; // 'inicio' | 'pro' | 'premium' (el fundador llega como 'premium')
+  const isFounder = m.founder === '1';
+  // Fundador: Premium al precio de Pro + el bot ($10) en un solo cargo.
+  const priceUsd = isFounder ? PLAN_PRICE_USD.pro + 10 : (PLAN_PRICE_USD[plan] ?? 0);
 
   const next = {
     ...(studio?.subscription ?? {}),
     status: 'ACTIVE',
-    plan: m.plan,
+    plan,
+    priceUsd,
+    isPromo: false, // ya está pagando: termina la promo de lanzamiento
+    founder: isFounder,
     currentPeriodEnd: end.toISOString(),
     stripeCustomerId: s.customer,
     stripeSubscriptionId: s.subscription,
   };
 
-  await admin.from('studios').update({ subscription: next }).eq('id', m.studio_id);
+  // El bot de WhatsApp con IA viene INCLUIDO en Premium (y en el plan Fundador).
+  // Al pagar Premium se enciende; en Inicio/Pro se apaga (no lo pagan).
+  const whatsapp = { ...(studio?.whatsapp ?? {}), aiActive: plan === 'premium' };
+
+  await admin.from('studios').update({ subscription: next, whatsapp }).eq('id', m.studio_id);
 }

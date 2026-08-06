@@ -157,8 +157,40 @@ Deno.serve(async (req) => {
     if (kind === 'subscription') {
       if (me.role !== 'STUDIO_ADMIN') return json({ error: 'Solo el estudio' }, 403);
       const plan = String(body.plan);
-      const amount = PLAN_PRICES[plan];
-      if (!amount) return json({ error: 'Plan inválido' }, 400);
+
+      // Programa Fundador (primeros 10): acceso Premium al precio de Pro + el
+      // bot de WhatsApp ($10), en UN SOLO cargo mensual, de por vida. Se limita
+      // a FOUNDER_LIMIT estudios; al llenarse, todo vuelve a los precios normales.
+      const isFounder = plan === 'founder';
+      const metaPlan = isFounder ? 'premium' : plan; // por debajo, el fundador ES premium
+      let amount: number;
+      let productName: string;
+
+      if (isFounder) {
+        // Tope duro en el servidor: cuenta cuántos fundadores ya existen.
+        const admin = createClient(
+          Deno.env.get('SUPABASE_URL')!,
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+        );
+        const { count } = await admin
+          .from('studios')
+          .select('id', { count: 'exact', head: true })
+          .eq('subscription->>founder', 'true');
+        const limit = Number(Deno.env.get('FOUNDER_LIMIT') ?? '10') || 10;
+        if ((count ?? 0) >= limit) {
+          return json(
+            { error: 'El programa Fundador ya está completo. Elige uno de los planes normales.' },
+            400,
+          );
+        }
+        const botUsd = Number(Deno.env.get('FOUNDER_BOT_PRICE') ?? '10') || 10;
+        amount = PLAN_PRICES.pro + Math.round(botUsd * 100); // Premium al precio de Pro + bot
+        productName = 'Move yA · Fundador (acceso Premium + Bot WhatsApp)';
+      } else {
+        amount = PLAN_PRICES[plan];
+        if (!amount) return json({ error: 'Plan inválido' }, 400);
+        productName = `Move yA · Plan ${plan}`;
+      }
 
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
@@ -169,7 +201,7 @@ Deno.serve(async (req) => {
               currency: 'usd', // la suscripción SaaS se cobra en USD
               unit_amount: amount,
               recurring: { interval: 'month' },
-              product_data: { name: `Move yA · Plan ${plan}` },
+              product_data: { name: productName },
             },
           },
         ],
@@ -177,7 +209,7 @@ Deno.serve(async (req) => {
         // estudio (con hash de la ruta) en vez de la raíz (que mandaba al login).
         success_url: `${APP_URL}/?suscripcion=exito#/admin/subscription`,
         cancel_url: `${APP_URL}/?suscripcion=cancelado#/admin/subscription`,
-        metadata: { kind: 'subscription', studio_id: me.studio_id, plan },
+        metadata: { kind: 'subscription', studio_id: me.studio_id, plan: metaPlan, founder: isFounder ? '1' : '0' },
       });
       return json({ url: session.url });
     }
