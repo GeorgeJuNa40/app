@@ -57,8 +57,8 @@ export default function WhatsappAgent() {
           </label>
           <div className="border-t border-cream-dark pt-2">
             <Toggle
-              label="Bot con IA activo"
-              description="Responde solo a los alumnos usando la base de conocimiento."
+              label="Respuestas automáticas"
+              description="Cuando está encendido, el bot contesta solo a tus alumnos. Apágalo si prefieres responder tú."
               checked={wa.botEnabled}
               onChange={(v) => updateWhatsapp({ botEnabled: v })}
             />
