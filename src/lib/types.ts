@@ -79,6 +79,7 @@ export interface Subscription {
   promoPriceUsd: number; // precio de la promo de lanzamiento (1)
   trialDays: number; // días de prueba de la promo (14)
   isPromo: boolean; // registrado dentro de la ventana de lanzamiento (3 meses)
+  founder?: boolean; // parte del programa Fundador (primeros 10): Premium + bot a precio especial de por vida
   trialEndsAt: string; // fin de la prueba
   currentPeriodEnd: string; // acceso hasta esta fecha
 }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore, isSubscriptionActive } from '../../lib/store';
 import { PageHeader, Card, Button, Badge } from '../../components/ui';
 import { daysUntil } from '../../lib/format';
-import { PLANS, PROMO_PRICE, PROMO_TRIAL_DAYS, getPlan } from '../../lib/plans';
+import { PLANS, PROMO_PRICE, PROMO_TRIAL_DAYS, getPlan, FOUNDER_CODE, FOUNDER_PRICE_USD } from '../../lib/plans';
 import { startStripeCheckout } from '../../lib/payments';
 import StripeConnectCard from './StripeConnectCard';
 import type { PlanId } from '../../lib/types';
@@ -16,13 +16,22 @@ const money = (n: number) => `$${n.toFixed(2)}`;
 export default function SubscriptionScreen() {
   const { currentStudio, activatePromo, markSubscriptionPaid, setSubscriptionPastDue } = useStore();
   const [busy, setBusy] = useState(false);
+  const [founderCode, setFounderCode] = useState('');
   const sub = currentStudio!.subscription;
+  const founderUnlocked = founderCode.trim().toUpperCase() === FOUNDER_CODE;
 
   // Elegir/cambiar plan → pago recurrente en Stripe.
   const choosePlan = async (plan: PlanId) => {
     setBusy(true);
     const ok = await startStripeCheckout({ kind: 'subscription', plan });
     if (!ok) setBusy(false); // si funciona, redirige a Stripe
+  };
+
+  // Programa Fundador: acceso Premium al precio de Pro + bot, un solo cargo.
+  const chooseFounder = async () => {
+    setBusy(true);
+    const ok = await startStripeCheckout({ kind: 'subscription', plan: 'founder' });
+    if (!ok) setBusy(false);
   };
 
   const trialEndsAt = sub.trialEndsAt ?? sub.currentPeriodEnd;
@@ -59,7 +68,8 @@ export default function SubscriptionScreen() {
 
         {inTrial ? (
           <p className="mt-3 text-sm text-ink-soft">
-            Estás en tu prueba de lanzamiento con el <strong>plan Pro habilitado</strong>. Te quedan{' '}
+            Estás en tu prueba de lanzamiento con <strong>acceso Premium completo</strong> — conoce
+            todas las funciones. Te quedan{' '}
             <strong>{trialDaysLeft} día{trialDaysLeft === 1 ? '' : 's'}</strong>. Cuando termine,
             elige abajo el plan que quieras conservar.
           </p>
@@ -88,7 +98,7 @@ export default function SubscriptionScreen() {
               Empieza por {money(PROMO_PRICE)} · {PROMO_TRIAL_DAYS} días de prueba
             </p>
             <p className="text-sm opacity-90">
-              Activas el plan Pro completo. Al terminar la prueba eliges tu plan.
+              Activas TODO el plan Premium. Al terminar la prueba eliges tu plan.
             </p>
           </div>
           <Button variant="secondary" onClick={activatePromo}>
@@ -152,6 +162,35 @@ export default function SubscriptionScreen() {
         })}
       </div>
 
+      {/* Programa Fundador (por invitación) — solo si aún no está activa */}
+      {!active && (
+        <Card className="mt-6 p-6">
+          <h2 className="font-semibold text-ink">¿Tienes un código de fundador? ✦</h2>
+          <p className="mt-1 text-sm text-ink-faint">
+            Programa exclusivo para nuestros primeros estudios: <strong>acceso Premium</strong> al
+            precio de Pro, con el <strong>Bot de WhatsApp incluido</strong>, por{' '}
+            <strong>{money(FOUNDER_PRICE_USD)}/mes</strong> — precio de por vida.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <input
+              className="rounded-full border border-cream-dark px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand"
+              placeholder="Código de fundador"
+              value={founderCode}
+              onChange={(e) => setFounderCode(e.target.value)}
+            />
+            {founderUnlocked ? (
+              <Button disabled={busy} onClick={chooseFounder}>
+                {busy ? 'Redirigiendo…' : `Unirme como Fundador · ${money(FOUNDER_PRICE_USD)}/mes`}
+              </Button>
+            ) : (
+              <span className="text-sm text-ink-faint">
+                {founderCode.trim() ? 'Código no válido' : 'Ingresa tu código para activarlo'}
+              </span>
+            )}
+          </div>
+        </Card>
+      )}
+
       {/* Acciones de renovación / demo */}
       {active && (
         <div className="mt-6 flex flex-wrap gap-2">
@@ -169,8 +208,8 @@ export default function SubscriptionScreen() {
         <h2 className="mb-3 font-semibold text-ink">¿Cómo funciona?</h2>
         <ol className="space-y-3 text-sm text-ink-soft">
           <li>
-            <strong className="text-ink">1. Empieza por {money(PROMO_PRICE)}.</strong> Activas el
-            plan Pro completo durante {PROMO_TRIAL_DAYS} días de prueba.
+            <strong className="text-ink">1. Empieza por {money(PROMO_PRICE)}.</strong> Activas TODO
+            el plan Premium durante {PROMO_TRIAL_DAYS} días de prueba.
           </li>
           <li>
             <strong className="text-ink">2. Explora sin límites.</strong> Prueba todas las funciones

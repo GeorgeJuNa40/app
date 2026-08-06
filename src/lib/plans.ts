@@ -2,7 +2,8 @@ import type { PlanId } from './types';
 
 // Catálogo de planes de suscripción del panel del Estudio.
 // Precios mensuales en USD (terminados en .99). Durante la prueba de
-// lanzamiento ($1 · 14 días) se habilita el plan Pro completo.
+// lanzamiento ($1 · 14 días) se habilita el plan Premium completo para que
+// el estudio conozca todas las funciones antes de elegir.
 export interface Plan {
   id: PlanId;
   name: string;
@@ -14,7 +15,14 @@ export interface Plan {
 
 export const PROMO_PRICE = 1;
 export const PROMO_TRIAL_DAYS = 14;
-export const PROMO_PLAN: PlanId = 'pro'; // plan que se habilita durante la prueba
+export const PROMO_PLAN: PlanId = 'premium'; // plan que se habilita durante la prueba (todo Premium)
+
+// Programa Fundador (primeros 10 estudios): acceso Premium al precio de Pro +
+// el bot de WhatsApp ($10), en un solo cargo mensual, de por vida. El código lo
+// entregas solo a tus invitados; el servidor además limita a 10 en total.
+export const FOUNDER_CODE = 'FUNDADOR10';
+export const FOUNDER_BOT_USD = 10;
+export const FOUNDER_PRICE_USD = 34.99 + FOUNDER_BOT_USD; // Pro + bot = 44.99
 
 // ---------------------------------------------------------------------------
 // Capacidades por plan. Cada función "premium/pro" está protegida con una de

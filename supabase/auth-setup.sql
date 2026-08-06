@@ -10,8 +10,9 @@
 --   * Nombre de estudio (sin CEU)                  -> crea su ESTUDIO y es ADMIN.
 --
 -- También guarda el teléfono (con lada) de cada usuario y, para un estudio nuevo,
--- su país y moneda local (derivados del registro), y siembra la suscripción con
--- los valores actuales (plan Pro, $39.99, promo $1 · 14 días).
+-- su país y moneda local (derivados del registro), y siembra la suscripción de
+-- prueba: promo $1 · 14 días con ACCESO PREMIUM para explorar todo. El bot de
+-- WhatsApp queda en modo básico (aiActive=false) hasta que contraten (sin costo).
 --
 -- Cómo usarlo:
 --   1. Supabase -> "SQL Editor" -> "New query".
@@ -83,16 +84,17 @@ begin
       v_phone,
       new.email,
       jsonb_build_object(
-        'primaryColor', '#2D5A4C', 'secondaryColor', '#F4F1EA',
-        'accentColor', '#333333', 'fontFamily', 'Inter', 'logoText', v_studio_name,
+        'primaryColor', '#4A5D55', 'secondaryColor', '#FAF8F3',
+        'accentColor', '#212121', 'fontFamily', 'Inter', 'logoText', v_studio_name,
+        'logoShape', 'rounded',
         'country', v_country, 'currencyCode', v_currency
       ),
       jsonb_build_object(
-        'number', '', 'botEnabled', false,
+        'number', '', 'botEnabled', false, 'aiActive', false,
         'templates', '[]'::jsonb, 'knowledge', '[]'::jsonb
       ),
       jsonb_build_object(
-        'status', 'TRIALING', 'plan', 'pro', 'priceUsd', 39.99, 'promoPriceUsd', 1,
+        'status', 'TRIALING', 'plan', 'premium', 'priceUsd', 84.99, 'promoPriceUsd', 1,
         'trialDays', 14, 'isPromo', true,
         'trialEndsAt', (now() + interval '14 days'),
         'currentPeriodEnd', (now() + interval '14 days')
