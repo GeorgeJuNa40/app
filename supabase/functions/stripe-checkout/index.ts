@@ -25,7 +25,7 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
 const APP_URL = (Deno.env.get('APP_URL') ?? '').replace(/\/$/, '');
 
 // Precios mensuales de los planes del estudio (en centavos de USD).
-const PLAN_PRICES: Record<string, number> = { inicio: 2499, pro: 3499, premium: 8499 };
+const PLAN_PRICES: Record<string, number> = { inicio: 2499, pro: 4499, premium: 8499 };
 
 // -------- Comisión de plataforma (Move yA) sobre los pagos en línea de alumnos
 // Se cobra AL ESTUDIO: sale de su parte del cargo directo (no se le suma al

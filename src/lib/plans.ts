@@ -22,7 +22,7 @@ export const PROMO_PLAN: PlanId = 'premium'; // plan que se habilita durante la 
 // entregas solo a tus invitados; el servidor además limita a 10 en total.
 export const FOUNDER_CODE = 'FUNDADOR10';
 export const FOUNDER_BOT_USD = 10;
-export const FOUNDER_PRICE_USD = 34.99 + FOUNDER_BOT_USD; // Pro + bot = 44.99
+export const FOUNDER_PRICE_USD = 44.99 + FOUNDER_BOT_USD; // Pro + bot = 54.99
 
 // ---------------------------------------------------------------------------
 // Capacidades por plan. Cada función "premium/pro" está protegida con una de
@@ -70,7 +70,7 @@ export const PLANS: Plan[] = [
   {
     id: 'pro',
     name: 'Pro',
-    priceUsd: 34.99,
+    priceUsd: 44.99,
     tagline: 'El favorito de los estudios en marcha',
     highlight: true,
     features: [

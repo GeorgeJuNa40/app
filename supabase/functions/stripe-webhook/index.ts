@@ -118,7 +118,7 @@ async function applyPackage(m: Record<string, string>, s: Stripe.Checkout.Sessio
 }
 
 // Precios mensuales de referencia (informativos) — deben coincidir con plans.ts.
-const PLAN_PRICE_USD: Record<string, number> = { inicio: 24.99, pro: 34.99, premium: 84.99 };
+const PLAN_PRICE_USD: Record<string, number> = { inicio: 24.99, pro: 44.99, premium: 84.99 };
 
 async function applySubscription(m: Record<string, string>, s: Stripe.Checkout.Session) {
   const end = new Date(Date.now() + 30 * DAY);
