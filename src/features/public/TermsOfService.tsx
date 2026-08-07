@@ -1,6 +1,8 @@
 // Página PÚBLICA (sin iniciar sesión) de Términos y Condiciones de Move yA.
 // Complementa el Aviso de Privacidad; se enlaza desde el registro y sirve para
 // cumplir requisitos de Stripe y tiendas de apps. Contenido estándar ajustable.
+import { Link } from 'react-router-dom';
+
 const UPDATED = '7 de agosto de 2026';
 const CONTACT_EMAIL = 'soporte@moveya.app';
 
@@ -8,6 +10,9 @@ export default function TermsOfService() {
   return (
     <div className="min-h-screen bg-cream px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-3xl">
+        <Link to="/" className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:underline">
+          ← Volver a Move yA
+        </Link>
         <div className="mb-8 text-center">
           <p className="text-2xl font-black text-brand">Move yA</p>
           <h1 className="mt-3 text-3xl font-bold text-ink">Términos y Condiciones</h1>
