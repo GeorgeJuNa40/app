@@ -66,6 +66,25 @@ Deno.serve(async (req) => {
       if (m.kind === 'package') await applyPackage(m, s);
       else if (m.kind === 'subscription') await applySubscription(m, s);
     }
+    // Renovación mensual: Stripe cobró el siguiente periodo -> extiende el acceso.
+    else if (event.type === 'invoice.payment_succeeded' || event.type === 'invoice.paid') {
+      const inv = event.data.object as Stripe.Invoice;
+      // deno-lint-ignore no-explicit-any
+      const subId = (inv as any).subscription as string | null;
+      if (subId) await renewSubscription(subId, inv);
+    }
+    // Impago: marca la suscripción como vencida (el panel se limita).
+    else if (event.type === 'invoice.payment_failed') {
+      const inv = event.data.object as Stripe.Invoice;
+      // deno-lint-ignore no-explicit-any
+      const subId = (inv as any).subscription as string | null;
+      if (subId) await setSubStatus(subId, 'PAST_DUE');
+    }
+    // Cancelación: la suscripción se dio de baja en Stripe.
+    else if (event.type === 'customer.subscription.deleted') {
+      const sub = event.data.object as Stripe.Subscription;
+      await setSubStatus(sub.id, 'CANCELED');
+    }
   } catch (e) {
     // Devolver 500 hace que Stripe reintente el evento más tarde.
     return new Response(`Error: ${(e as Error).message}`, { status: 500 });
@@ -150,4 +169,38 @@ async function applySubscription(m: Record<string, string>, s: Stripe.Checkout.S
   const whatsapp = { ...(studio?.whatsapp ?? {}), aiActive: plan === 'premium' };
 
   await admin.from('studios').update({ subscription: next, whatsapp }).eq('id', m.studio_id);
+}
+
+// Busca el estudio dueño de una suscripción de Stripe (guardada en el jsonb).
+async function findStudioBySub(subId: string) {
+  const { data } = await admin
+    .from('studios')
+    .select('id, subscription')
+    .eq('subscription->>stripeSubscriptionId', subId)
+    .maybeSingle();
+  return data ?? null;
+}
+
+// Renovación: extiende el acceso hasta el fin del nuevo periodo pagado y deja
+// la suscripción ACTIVE. NO toca plan/aiActive/founder (eso se fijó al contratar).
+async function renewSubscription(subId: string, inv: Stripe.Invoice) {
+  const studio = await findStudioBySub(subId);
+  if (!studio) return; // el primer pago ya lo maneja checkout.session.completed
+  // deno-lint-ignore no-explicit-any
+  const periodEnd = (inv as any)?.lines?.data?.[0]?.period?.end as number | undefined;
+  const end = periodEnd ? new Date(periodEnd * 1000) : new Date(Date.now() + 30 * DAY);
+  const next = {
+    ...(studio.subscription ?? {}),
+    status: 'ACTIVE',
+    currentPeriodEnd: end.toISOString(),
+  };
+  await admin.from('studios').update({ subscription: next }).eq('id', studio.id);
+}
+
+// Cambia el estado de la suscripción (PAST_DUE por impago, CANCELED por baja).
+async function setSubStatus(subId: string, status: 'PAST_DUE' | 'CANCELED') {
+  const studio = await findStudioBySub(subId);
+  if (!studio) return;
+  const next = { ...(studio.subscription ?? {}), status };
+  await admin.from('studios').update({ subscription: next }).eq('id', studio.id);
 }
