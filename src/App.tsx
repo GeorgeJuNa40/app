@@ -46,6 +46,8 @@ const OnboardingScreen = lazyWithReload(() => import('./features/onboarding/Onbo
 const StudioInfoPage = lazyWithReload(() => import('./features/public/StudioInfoPage'));
 // Página pública de política de privacidad (sin login) — para publicar en Meta.
 const PrivacyPolicy = lazyWithReload(() => import('./features/public/PrivacyPolicy'));
+// Página pública de términos y condiciones (sin login).
+const TermsOfService = lazyWithReload(() => import('./features/public/TermsOfService'));
 
 const AdminDashboard = lazyWithReload(() => import('./features/admin/AdminDashboard'));
 const MembersCRM = lazyWithReload(() => import('./features/admin/MembersCRM'));
@@ -147,6 +149,8 @@ export default function App() {
       <Route path="/info/:ceu" element={<StudioInfoPage />} />
       {/* Política de privacidad PÚBLICA (sin login) — requerida para publicar en Meta. */}
       <Route path="/privacy" element={<PrivacyPolicy />} />
+      {/* Términos y condiciones PÚBLICOS (sin login). */}
+      <Route path="/terms" element={<TermsOfService />} />
 
       {/* Onboarding: pantalla de inicio con CEU. Si ya hay sesión, redirige. */}
       <Route

@@ -10,9 +10,9 @@ import type { PlanId } from '../../lib/types';
 // Precio en USD con 2 decimales (los planes terminan en .99).
 const money = (n: number) => `$${n.toFixed(2)}`;
 
-// Suscripción SaaS: 3 planes (Inicio $19.99, Pro $39.99, Premium $79.99) con
-// promo de lanzamiento ($1 · 14 días con el plan Pro habilitado). El cobro del
-// plan se hace en la página segura de Stripe.
+// Suscripción SaaS: 3 planes (Inicio $24.99, Pro $44.99, Premium $84.99) con
+// promo de lanzamiento ($1 · 14 días con acceso Premium) y programa Fundador
+// (primeros 10). El cobro del plan se hace en la página segura de Stripe.
 export default function SubscriptionScreen() {
   const { currentStudio, activatePromo, markSubscriptionPaid, setSubscriptionPastDue } = useStore();
   const [busy, setBusy] = useState(false);

@@ -68,16 +68,19 @@ begin
       v_phone,
       new.email,
       jsonb_build_object(
-        'primaryColor', '#2D5A4C', 'secondaryColor', '#F4F1EA',
-        'accentColor', '#333333', 'fontFamily', 'Inter', 'logoText', v_studio_name,
+        'primaryColor', '#4A5D55', 'secondaryColor', '#FAF8F3',
+        'accentColor', '#212121', 'fontFamily', 'Inter', 'logoText', v_studio_name,
+        'logoShape', 'rounded',
         'country', v_country, 'currencyCode', v_currency
       ),
       jsonb_build_object(
-        'number', '', 'botEnabled', false,
+        'number', '', 'botEnabled', false, 'aiActive', false,
         'templates', '[]'::jsonb, 'knowledge', '[]'::jsonb
       ),
+      -- Prueba de lanzamiento: $1 · 14 días con ACCESO PREMIUM (para explorar
+      -- todo). El bot queda en modo básico (aiActive=false) hasta que contraten.
       jsonb_build_object(
-        'status', 'TRIALING', 'plan', 'pro', 'priceUsd', 39.99, 'promoPriceUsd', 1,
+        'status', 'TRIALING', 'plan', 'premium', 'priceUsd', 84.99, 'promoPriceUsd', 1,
         'trialDays', 14, 'isPromo', true,
         'trialEndsAt', (now() + interval '14 days'),
         'currentPeriodEnd', (now() + interval '14 days')

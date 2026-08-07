@@ -238,6 +238,13 @@ export default function OnboardingScreen() {
               </>
             )}
           </div>
+
+          {/* Aviso legal: enlaces a Términos y Aviso de Privacidad (páginas públicas). */}
+          <p className="mt-6 text-center text-xs leading-relaxed text-ink-faint">
+            {mode === 'login' ? 'Al usar Move yA aceptas nuestros' : 'Al crear tu cuenta aceptas nuestros'}{' '}
+            <a href="#/terms" className="font-medium text-brand hover:underline">Términos</a>{' '}y el{' '}
+            <a href="#/privacy" className="font-medium text-brand hover:underline">Aviso de Privacidad</a>.
+          </p>
         </div>
       </div>
 
