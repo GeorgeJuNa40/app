@@ -1,6 +1,8 @@
 // Página PÚBLICA (sin iniciar sesión) de Política de Privacidad de Move yA.
 // Se usa para publicar la app en Meta/WhatsApp y para dar transparencia a los
 // usuarios. Contenido estándar; el estudio/plataforma puede ajustarlo.
+import { Link } from 'react-router-dom';
+
 const UPDATED = '5 de agosto de 2026';
 const CONTACT_EMAIL = 'soporte@moveya.app';
 
@@ -8,6 +10,9 @@ export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-cream px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-3xl">
+        <Link to="/" className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:underline">
+          ← Volver a Move yA
+        </Link>
         <div className="mb-8 text-center">
           <p className="text-2xl font-black text-brand">Move yA</p>
           <h1 className="mt-3 text-3xl font-bold text-ink">Política de Privacidad</h1>

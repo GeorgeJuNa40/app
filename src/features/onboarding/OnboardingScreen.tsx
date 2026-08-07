@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useStore } from '../../lib/store';
 import { COUNTRIES, DEFAULT_COUNTRY_ISO, getCountry } from '../../lib/countries';
 
@@ -239,11 +239,12 @@ export default function OnboardingScreen() {
             )}
           </div>
 
-          {/* Aviso legal: enlaces a Términos y Aviso de Privacidad (páginas públicas). */}
+          {/* Aviso legal: navegación INTERNA (Link) a Términos y Privacidad. Así no
+              recarga la app ni depende de la red, y se puede regresar. */}
           <p className="mt-6 text-center text-xs leading-relaxed text-ink-faint">
             {mode === 'login' ? 'Al usar Move yA aceptas nuestros' : 'Al crear tu cuenta aceptas nuestros'}{' '}
-            <a href="#/terms" className="font-medium text-brand hover:underline">Términos</a>{' '}y el{' '}
-            <a href="#/privacy" className="font-medium text-brand hover:underline">Aviso de Privacidad</a>.
+            <Link to="/terms" className="font-medium text-brand hover:underline">Términos</Link>{' '}y el{' '}
+            <Link to="/privacy" className="font-medium text-brand hover:underline">Aviso de Privacidad</Link>.
           </p>
         </div>
       </div>
