@@ -459,23 +459,40 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         };
       });
     },
-    cancelBooking(bookingId) {
+    // Cancela una reserva y DEVUELVE el crédito de forma atómica en el servidor
+    // (RPC cancel_booking). Si esa función aún no está instalada, usa el respaldo
+    // local (escritura directa, compatible con la RLS antigua).
+    async cancelBooking(bookingId) {
       const booking = db.bookings.find((b) => b.id === bookingId);
-      if (!booking) return;
-      setDb((prev) => ({
-        ...prev,
-        bookings: prev.bookings.map((b) => (b.id === bookingId ? { ...b, status: 'CANCELED' } : b)),
-        userPackages: booking.userPackageId
-          ? prev.userPackages.map((p) =>
-              p.id === booking.userPackageId ? { ...p, creditsUsed: Math.max(0, p.creditsUsed - 1) } : p,
-            )
-          : prev.userPackages,
-      }));
-      void dbUpdate('bookings', bookingId, { status: 'CANCELED' });
-      if (booking.userPackageId) {
-        const up = db.userPackages.find((p) => p.id === booking.userPackageId);
-        if (up) void dbUpdate('user_packages', up.id, { credits_used: Math.max(0, up.creditsUsed - 1) });
+      if (!booking || booking.status === 'CANCELED') return;
+      const applyLocal = () =>
+        setDb((prev) => ({
+          ...prev,
+          bookings: prev.bookings.map((b) => (b.id === bookingId ? { ...b, status: 'CANCELED' } : b)),
+          userPackages: booking.userPackageId
+            ? prev.userPackages.map((p) =>
+                p.id === booking.userPackageId ? { ...p, creditsUsed: Math.max(0, p.creditsUsed - 1) } : p,
+              )
+            : prev.userPackages,
+        }));
+
+      const { error } = await supabase.rpc('cancel_booking', { p_booking_id: bookingId });
+      if (error) {
+        const msg = error.message || '';
+        if (error.code === 'PGRST202' || /Could not find the function/i.test(msg)) {
+          // Respaldo: la RPC no existe todavía → escritura directa (RLS antigua).
+          applyLocal();
+          void dbUpdate('bookings', bookingId, { status: 'CANCELED' });
+          if (booking.userPackageId) {
+            const up = db.userPackages.find((p) => p.id === booking.userPackageId);
+            if (up) void dbUpdate('user_packages', up.id, { credits_used: Math.max(0, up.creditsUsed - 1) });
+          }
+          return;
+        }
+        notifyError('cancelar', msg);
+        return;
       }
+      applyLocal();
     },
 
     // El coach marca si el alumno asistió. Al asistir gana 1 estrella (recompensa);
@@ -517,23 +534,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       applyPurchase(setDb, db, userId, packageId, method, 'studio');
     },
 
-    redeemReward(rewardId) {
+    // Canjea una recompensa. El saldo de estrellas se valida en el servidor
+    // (RPC redeem_reward). Si esa función aún no está instalada, usa el respaldo
+    // local (escritura directa, compatible con la RLS antigua).
+    async redeemReward(rewardId) {
       if (!currentUser) return;
+      const uid = currentUser.id;
       const reward = db.rewards.find((r) => r.id === rewardId);
       if (!reward) return;
-      const balance = db.stars
-        .filter((s) => s.userId === currentUser.id)
-        .reduce((a, s) => a + s.delta, 0);
-      if (balance < reward.starCost) return;
-      const entry = {
-        id: newId(),
-        userId: currentUser.id,
+      const balance = db.stars.filter((s) => s.userId === uid).reduce((a, s) => a + s.delta, 0);
+      if (balance < reward.starCost) {
+        notifyError('canjear', 'No tienes estrellas suficientes.');
+        return;
+      }
+      const mkEntry = (id: string): StarEntry => ({
+        id,
+        userId: uid,
         delta: -reward.starCost,
-        reason: 'redemption' as const,
+        reason: 'redemption',
         createdAt: new Date().toISOString(),
-      };
-      setDb((prev) => ({ ...prev, stars: [...prev.stars, entry] }));
-      void dbInsert('star_entries', rowStar(entry));
+      });
+
+      const { data, error } = await supabase.rpc('redeem_reward', { p_reward_id: rewardId });
+      if (error) {
+        const msg = error.message || '';
+        if (error.code === 'PGRST202' || /Could not find the function/i.test(msg)) {
+          // Respaldo: la RPC no existe todavía → escritura directa (RLS antigua).
+          const entry = mkEntry(newId());
+          setDb((prev) => ({ ...prev, stars: [...prev.stars, entry] }));
+          void dbInsert('star_entries', rowStar(entry));
+          return;
+        }
+        notifyError('canjear', /NO_STARS/.test(msg) ? 'No tienes estrellas suficientes.' : msg);
+        return;
+      }
+      const res = data as { entry_id?: string } | null;
+      setDb((prev) => ({ ...prev, stars: [...prev.stars, mkEntry(res?.entry_id ?? newId())] }));
     },
 
     upsertPackage(pkg) {

@@ -100,8 +100,8 @@ export function seedDatabase(): Database {
         },
         subscription: {
           status: 'TRIALING',
-          plan: 'pro',
-          priceUsd: 39.99,
+          plan: 'premium',
+          priceUsd: 84.99,
           promoPriceUsd: 1,
           trialDays: 14,
           isPromo: true,
