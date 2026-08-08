@@ -35,6 +35,7 @@ export interface Branding {
   logoText: string;
   logoUrl?: string; // logo del estudio (imagen subida), visible para todos
   logoShape?: 'rounded' | 'circle'; // forma del logo: cuadrado redondeado (def.) o círculo
+  goalStarReward?: number; // estrellas que gana el alumno al cumplir una meta (def. 5)
   heroPhotoUrl?: string;
   country?: string; // ISO del país del estudio (ej. MX), derivado del registro
   currencyCode?: string; // moneda local del estudio (ej. MXN); default USD
@@ -204,10 +205,11 @@ export interface Goal {
   id: string;
   userId: string;
   title: string;
-  targetValue: number;
-  currentValue: number;
-  periodEnd: string;
+  targetValue: number; // meta: número de clases a asistir
+  currentValue: number; // avance (clases asistidas en la ventana)
+  periodEnd: string; // fecha límite
   achieved: boolean;
+  createdAt?: string; // inicio de la ventana de conteo (cuándo se creó la meta)
 }
 
 export interface Database {

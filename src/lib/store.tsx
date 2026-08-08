@@ -12,6 +12,7 @@ import type {
   ClassSession,
   ClassTemplate,
   Database,
+  Goal,
   MembershipState,
   OptionalService,
   Package,
@@ -48,6 +49,7 @@ import {
   rowClassTemplate,
   rowClassSession,
   rowReward,
+  rowGoal,
   rowUser,
 } from './repo';
 
@@ -99,6 +101,11 @@ interface StoreValue {
   markAttendance: (bookingId: string, attended: boolean) => void; // el coach marca asistencia
   buyPackageOnline: (packageId: string, method: PaymentMethod) => void;
   redeemReward: (rewardId: string) => void;
+  // Metas del alumno (las crea el propio alumno; avance por asistencia)
+  createGoal: (title: string, target: number, periodEnd: string) => void;
+  deleteGoal: (goalId: string) => void;
+  goalProgress: (goal: Goal) => number; // clases asistidas dentro de la ventana
+  awardGoal: (goalId: string) => void; // valida y da estrellas si ya cumplió
   // Estudio — pagos y planes
   registerManualPlan: (userId: string, packageId: string, method: PaymentMethod) => void;
   // Estudio — paquetes
@@ -570,6 +577,66 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       const res = data as { entry_id?: string } | null;
       setDb((prev) => ({ ...prev, stars: [...prev.stars, mkEntry(res?.entry_id ?? newId())] }));
+    },
+
+    // ---- Metas del alumno (las crea el propio alumno) ----
+    createGoal(title, target, periodEnd) {
+      if (!currentUser) return;
+      const goal: Goal = {
+        id: newId(),
+        userId: currentUser.id,
+        title: title.trim(),
+        targetValue: Math.max(1, Math.round(target)),
+        currentValue: 0,
+        periodEnd,
+        achieved: false,
+        createdAt: new Date().toISOString(),
+      };
+      setDb((prev) => ({ ...prev, goals: [...prev.goals, goal] }));
+      void dbInsert('goals', rowGoal(goal));
+    },
+    deleteGoal(goalId) {
+      setDb((prev) => ({ ...prev, goals: prev.goals.filter((g) => g.id !== goalId) }));
+      void dbDelete('goals', goalId);
+    },
+    // Avance = clases ASISTIDAS dentro de la ventana [createdAt, periodEnd].
+    goalProgress(goal) {
+      const start = goal.createdAt ?? '1970-01-01T00:00:00.000Z';
+      return db.bookings.filter((b) => {
+        if (b.userId !== goal.userId || b.status !== 'ATTENDED') return false;
+        const s = db.classSessions.find((x) => x.id === b.sessionId);
+        return !!s && s.startsAt >= start && s.startsAt <= goal.periodEnd;
+      }).length;
+    },
+    // Valida en el servidor si ya cumplió y, de ser así, la marca y da estrellas.
+    async awardGoal(goalId) {
+      const goal = db.goals.find((g) => g.id === goalId);
+      if (!goal || goal.achieved) return;
+      const { data, error } = await supabase.rpc('award_goal', { p_goal_id: goalId });
+      if (error) return; // si la RPC no existe aún, no bloqueamos
+      const res = data as { achieved?: boolean; stars?: number; progress?: number } | null;
+      if (!res?.achieved) {
+        if (typeof res?.progress === 'number') {
+          const prog = res.progress;
+          setDb((prev) => ({
+            ...prev,
+            goals: prev.goals.map((g) => (g.id === goalId ? { ...g, currentValue: prog } : g)),
+          }));
+        }
+        return;
+      }
+      const stars = res.stars ?? 0;
+      setDb((prev) => ({
+        ...prev,
+        goals: prev.goals.map((g) => (g.id === goalId ? { ...g, achieved: true } : g)),
+        stars:
+          stars > 0
+            ? [
+                ...prev.stars,
+                { id: newId(), userId: goal.userId, delta: stars, reason: 'bonus' as const, createdAt: new Date().toISOString() },
+              ]
+            : prev.stars,
+      }));
     },
 
     upsertPackage(pkg) {

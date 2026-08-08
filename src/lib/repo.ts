@@ -28,6 +28,7 @@ const DEFAULT_BRANDING = {
   fontFamily: 'Inter',
   logoText: 'Move yA',
   logoShape: 'rounded' as const,
+  goalStarReward: 5,
 };
 const DEFAULT_WHATSAPP = { number: '', botEnabled: false, aiActive: false, templates: [], knowledge: [] };
 const DEFAULT_SUBSCRIPTION = {
@@ -166,6 +167,7 @@ const mapGoal = (r: Row): Goal => ({
   currentValue: r.current_value,
   periodEnd: r.period_end,
   achieved: r.achieved,
+  createdAt: r.created_at ?? undefined,
 });
 
 function emptyDatabase(): Database {
@@ -345,6 +347,16 @@ export const rowReward = (r: Reward): Row => ({
   description: r.description,
   star_cost: r.starCost,
   active: r.active,
+});
+export const rowGoal = (g: Goal): Row => ({
+  id: g.id,
+  user_id: g.userId,
+  title: g.title,
+  target_value: g.targetValue,
+  current_value: g.currentValue,
+  period_end: g.periodEnd,
+  achieved: g.achieved,
+  created_at: g.createdAt ?? new Date().toISOString(),
 });
 export const rowUser = (u: User): Row => ({
   id: u.id,
