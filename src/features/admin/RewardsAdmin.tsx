@@ -9,8 +9,9 @@ const emptyDraft = (studioId: string): Reward => ({
 
 // Plan de recompensas editable — el estudio incentiva a sus alumnos.
 export default function RewardsAdmin() {
-  const { db, currentStudio, upsertReward, deleteReward } = useStore();
+  const { db, currentStudio, upsertReward, deleteReward, updateBranding } = useStore();
   const rewards = db.rewards.filter((r) => r.studioId === currentStudio!.id);
+  const goalReward = currentStudio!.branding.goalStarReward ?? 5;
   const [draft, setDraft] = useState<Reward | null>(null);
 
   const save = () => {
@@ -29,6 +30,26 @@ export default function RewardsAdmin() {
 
       <Card className="p-4 mb-6 bg-cream-dark/40 text-sm text-ink-soft">
         Los alumnos ganan <strong>1 estrella por asistencia</strong> y las canjean por estas recompensas.
+      </Card>
+
+      {/* Configuración de metas: el alumno se pone sus propias metas de asistencia. */}
+      <Card className="p-5 mb-6">
+        <h2 className="font-semibold text-ink">Metas de tus alumnos</h2>
+        <p className="text-sm text-ink-faint mt-1">
+          Cada alumno se pone sus propias metas de asistencia y la app lleva el conteo. Define cuántas
+          estrellas gana al cumplir una meta (pon 0 si no quieres dar estrellas por metas).
+        </p>
+        <label className="mt-3 flex items-center gap-3">
+          <span className="text-sm font-medium text-ink-soft">Estrellas por meta cumplida</span>
+          <input
+            type="number"
+            min="0"
+            className="w-24 rounded-xl border border-cream-dark px-3 py-2 outline-none focus:ring-2 ring-brand"
+            value={goalReward}
+            onChange={(e) => updateBranding({ goalStarReward: Math.max(0, Math.round(Number(e.target.value) || 0)) })}
+          />
+          <span className="text-brand">★</span>
+        </label>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
