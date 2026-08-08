@@ -10,7 +10,14 @@ import { startStripeCheckout } from '../../lib/payments';
 export default function MyPackages() {
   const { db, currentUser, currentStudio } = useStore();
   const uid = currentUser!.id;
-  const myPackages = db.userPackages.filter((p) => p.userId === uid);
+  // Muestra los paquetes vigentes y los que vencieron hace máximo 1 día; los
+  // más viejos se ocultan de la vista del alumno para no acumular tarjetas
+  // (el historial se conserva en la base para los reportes del estudio).
+  const GRACE_MS = 24 * 60 * 60 * 1000;
+  const myPackages = db.userPackages
+    .filter((p) => p.userId === uid)
+    .filter((p) => new Date(p.expiresAt).getTime() > Date.now() - GRACE_MS)
+    .sort((a, b) => a.expiresAt.localeCompare(b.expiresAt));
   const catalog = db.packages.filter((p) => p.studioId === currentStudio!.id && p.active);
   const [buying, setBuying] = useState<string | null>(null);
 
