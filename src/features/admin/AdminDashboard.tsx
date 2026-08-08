@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore, isSubscriptionActive } from '../../lib/store';
 import { PageHeader, StatCard, Card, Badge, Button } from '../../components/ui';
-import { fmtTime, fmtDay, daysUntil } from '../../lib/format';
+import { fmtTime, fmtDay, daysUntil, usd } from '../../lib/format';
 
 export default function AdminDashboard() {
   const { db, currentStudio, seatsLeft } = useStore();
@@ -62,7 +62,7 @@ export default function AdminDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
         <StatCard label="Alumnos activos" value={stats.students} icon="⚇" />
         <StatCard label="Reservas vigentes" value={stats.activeBookings} icon="▦" />
-        <StatCard label="Ingresos (paquetes)" value={`$${stats.revenue}`} hint="USD acumulado" icon="◈" />
+        <StatCard label="Ingresos (paquetes)" value={usd(stats.revenue)} hint="acumulado" icon="◈" />
         <StatCard
           label="Suscripción"
           value={<Badge tone={subActive ? 'success' : 'danger'}>{subLabel}</Badge>}
