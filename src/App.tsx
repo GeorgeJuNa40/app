@@ -42,6 +42,8 @@ function lazyWithReload<T extends ComponentType<unknown>>(
 }
 
 const OnboardingScreen = lazyWithReload(() => import('./features/onboarding/OnboardingScreen'));
+// Landing pública (cara comercial) que se muestra en el dominio sin sesión.
+const Landing = lazyWithReload(() => import('./features/public/Landing'));
 // Página pública informativa del estudio (sin login).
 const StudioInfoPage = lazyWithReload(() => import('./features/public/StudioInfoPage'));
 // Página pública de política de privacidad (sin login) — para publicar en Meta.
@@ -152,9 +154,34 @@ export default function App() {
       {/* Términos y condiciones PÚBLICOS (sin login). */}
       <Route path="/terms" element={<TermsOfService />} />
 
-      {/* Onboarding: pantalla de inicio con CEU. Si ya hay sesión, redirige. */}
+      {/* Raíz del dominio. Con sesión → panel según rol. Sin sesión: si viene
+          por link de invitación (?ceu=) va directo al registro; si no, muestra
+          la landing comercial. */}
       <Route
         path="/"
+        element={
+          currentUser ? (
+            <Navigate
+              to={
+                currentUser.role === 'STUDIO_ADMIN'
+                  ? '/admin'
+                  : currentUser.role === 'COACH'
+                    ? '/coach'
+                    : '/app'
+              }
+              replace
+            />
+          ) : new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('ceu') ? (
+            <OnboardingScreen />
+          ) : (
+            <Landing />
+          )
+        }
+      />
+
+      {/* Pantalla de acceso (registro / inicio de sesión), enlazada desde la landing. */}
+      <Route
+        path="/entrar"
         element={
           currentUser ? (
             <Navigate
