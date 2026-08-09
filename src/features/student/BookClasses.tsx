@@ -92,7 +92,8 @@ export default function BookClasses() {
           // Cierre por tiempo: aunque haya cupo, no se reserva si ya pasó el
           // límite que fijó el estudio (ej. 30 min antes de la clase).
           const minutesUntil = (new Date(s.startsAt).getTime() - Date.now()) / 60000;
-          const closed = cutoffMin > 0 && minutesUntil < cutoffMin;
+          // Cerrada si ya empezó (no se reserva en el pasado) o si pasó el cierre del estudio.
+          const closed = minutesUntil <= 0 || (cutoffMin > 0 && minutesUntil < cutoffMin);
           const canBook = seats > 0 && creditsLeft > 0 && !closed;
           return (
             <Button

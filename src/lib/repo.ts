@@ -120,6 +120,7 @@ const mapClassSession = (r: Row): ClassSession => ({
   startsAt: r.starts_at,
   endsAt: r.ends_at,
   capacity: r.capacity,
+  recurring: r.recurring ?? true,
 });
 
 const mapBooking = (r: Row): Booking => ({
@@ -314,6 +315,7 @@ export const rowClassSession = (s: ClassSession): Row => ({
   starts_at: s.startsAt,
   ends_at: s.endsAt,
   capacity: s.capacity,
+  recurring: s.recurring,
 });
 export const rowBooking = (b: Booking): Row => ({
   id: b.id,

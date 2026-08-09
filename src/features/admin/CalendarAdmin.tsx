@@ -28,6 +28,7 @@ export default function CalendarAdmin() {
       templateId: templates[0]?.id ?? '',
       coachId: coaches[0]?.id ?? null,
       startsAt: start.toISOString(), endsAt: start.toISOString(), capacity: 10,
+      recurring: true,
     });
     setStartLocal(toLocalInput(start.toISOString()));
   };
@@ -86,12 +87,25 @@ export default function CalendarAdmin() {
                   {coaches.map((c) => <option key={c.id} value={c.id}>{c.fullName}{c.coachStatus === 'PENDING' ? ' (pendiente)' : ''}</option>)}
                 </select>
               </Field>
-              <Field label="Fecha y hora">
+              <Field label={draft.recurring ? 'Día y hora (de la primera clase)' : 'Fecha y hora'}>
                 <input type="datetime-local" className="input" value={startLocal} onChange={(e) => setStartLocal(e.target.value)} />
               </Field>
               <Field label="Capacidad (lugares)">
                 <input type="number" className="input" value={draft.capacity} onChange={(e) => setDraft({ ...draft, capacity: +e.target.value })} />
               </Field>
+              <label className="flex items-start gap-3 rounded-xl bg-cream-dark/30 p-3">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-forest"
+                  checked={draft.recurring}
+                  onChange={(e) => setDraft({ ...draft, recurring: e.target.checked })}
+                />
+                <span className="text-sm text-ink-soft">
+                  <strong className="text-ink">Clase fija semanal</strong> — se repite cada semana. No se borra:
+                  al terminar el día se limpian solo las reservas y queda lista para la próxima semana.
+                  Desmárcalo si es un <em>evento único</em>.
+                </span>
+              </label>
             </div>
             <div className="mt-6 flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setDraft(null)}>Cancelar</Button>

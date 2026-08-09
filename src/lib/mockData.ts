@@ -56,6 +56,7 @@ export function seedDatabase(): Database {
         startsAt,
         endsAt: plusMinutes(startsAt, tpl.durationMin),
         capacity: slot.cap,
+        recurring: true,
       });
     }
   }
