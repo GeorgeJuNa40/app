@@ -1,14 +1,33 @@
 // Service worker de Move yA.
-// - Habilita "instalar app" (PWA).
-// - Prepara las notificaciones push (se activan en el siguiente paso).
-// NO cachea la app: siempre se carga la versión más reciente (evita quedarse
-// con una versión vieja tras publicar en Vercel).
+// - Habilita "instalar app" (PWA) y notificaciones push.
+// - AUTO-ACTUALIZA: en cada despliegue toma la versión fresca. En las
+//   navegaciones va "a la red primero" para nunca quedarse con un index.html
+//   viejo, y al activarse borra cualquier caché anterior. Así se evita quedar
+//   pegado en una versión pasada (el problema de la caché de Chrome/Android).
 
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
-// Passthrough sin caché: deja que el navegador cargue de la red normalmente.
-self.addEventListener('fetch', () => {});
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    (async () => {
+      // Borra cachés viejas de versiones anteriores del SW.
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+      await self.clients.claim();
+    })(),
+  );
+});
+
+// Navegaciones (cargar la app): RED PRIMERO → siempre baja el index.html más
+// reciente y, por tanto, los archivos nuevos. Si no hay red, cae a la caché.
+// El resto de peticiones: passthrough (el navegador usa su caché normal; los
+// archivos con hash cambian de nombre en cada despliegue, así que es seguro).
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.mode === 'navigate') {
+    event.respondWith(fetch(req).catch(() => caches.match(req)));
+  }
+});
 
 // --- Notificaciones push ---
 self.addEventListener('push', (event) => {
