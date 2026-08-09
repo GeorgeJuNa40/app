@@ -159,9 +159,10 @@ export interface ClassSession {
   studioId: string;
   templateId: string;
   coachId: string | null;
-  startsAt: string; // ISO
+  startsAt: string; // ISO — próxima ocurrencia (si es fija, se recorre +7 días cada semana)
   endsAt: string;
   capacity: number;
+  recurring: boolean; // clase fija semanal: no se borra, solo se limpian sus reservas cada semana
 }
 
 export interface Booking {
