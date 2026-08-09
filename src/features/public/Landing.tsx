@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PLANS, PROMO_PRICE, PROMO_TRIAL_DAYS } from '../../lib/plans';
+import { supabase } from '../../lib/supabase';
+import { PLANS, PROMO_PRICE, PROMO_TRIAL_DAYS, FOUNDER_PRICE_USD } from '../../lib/plans';
 
 // Landing pública (sin login): la cara comercial de Move yA en el dominio.
 // Enfocada en conversión y en celular. Los botones llevan al registro real.
@@ -40,6 +42,27 @@ const STEPS = [
 ];
 
 export default function Landing() {
+  // Programa Fundador: consulta cuántos de los 10 lugares ya se ocuparon.
+  // Mientras haya cupo → se promociona Fundador; al llenarse → cambia solo a
+  // la promo de $1 · 14 días. Si la función aún no está en Supabase (o falla),
+  // se asume abierto (estamos al inicio) y se muestra Fundador sin contador.
+  const [founders, setFounders] = useState<{ taken: number; limit: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    supabase.rpc('founders_status').then(
+      ({ data, error }) => {
+        if (!alive || error || !data) return;
+        setFounders({ taken: Number(data.taken) || 0, limit: Number(data.limit) || 10 });
+      },
+      () => {},
+    );
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const founderOpen = founders ? founders.taken < founders.limit : true;
+  const remaining = founders ? Math.max(0, founders.limit - founders.taken) : null;
+
   return (
     <div className="min-h-screen bg-cream-light text-ink font-sans">
       {/* ---------- NAV ---------- */}
@@ -59,6 +82,43 @@ export default function Landing() {
           </nav>
         </div>
       </header>
+
+      {/* ---------- BARRA DE PROMO (Fundador → $1 automático) ---------- */}
+      <div className="bg-forest text-cream-light">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-5 py-2.5 text-center text-sm">
+          {founderOpen ? (
+            <>
+              <span className="rounded-full bg-mint/30 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide">
+                Programa Fundador
+              </span>
+              <span className="font-medium">
+                Los primeros 10 estudios conservan Premium a <strong>${FOUNDER_PRICE_USD}/mes de por vida</strong>
+                {remaining !== null && (
+                  <>
+                    {' '}· <strong>quedan {remaining} de 10</strong>
+                  </>
+                )}
+                .
+              </span>
+              <Link to={REGISTRO} className="font-bold underline underline-offset-2">
+                Apartar mi lugar →
+              </Link>
+            </>
+          ) : (
+            <>
+              <span className="rounded-full bg-mint/30 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide">
+                Oferta de lanzamiento
+              </span>
+              <span className="font-medium">
+                Prueba Move yA completo por <strong>${PROMO_PRICE}</strong> · {PROMO_TRIAL_DAYS} días con acceso Premium.
+              </span>
+              <Link to={REGISTRO} className="font-bold underline underline-offset-2">
+                Empezar →
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* ---------- HERO ---------- */}
       <section className="relative overflow-hidden">
@@ -226,7 +286,7 @@ export default function Landing() {
             Tu próxima clase llena empieza hoy
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-cream/80">
-            Prueba Move yA completo por ${PROMO_PRICE}. Sin permanencia y con tu marca desde el primer día.
+            Prueba Move yA completo por ${PROMO_PRICE} · {PROMO_TRIAL_DAYS} días con acceso Premium. Sin permanencia y con tu marca desde el primer día.
           </p>
           <Link to={REGISTRO} className="mt-8 inline-block rounded-full bg-cream-light px-8 py-3.5 text-base font-bold text-forest shadow-card transition hover:bg-white">
             Crear mi estudio
