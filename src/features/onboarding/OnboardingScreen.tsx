@@ -14,8 +14,10 @@ export default function OnboardingScreen() {
   const [searchParams] = useSearchParams();
   const invitedCeu = (searchParams.get('ceu') ?? '').toUpperCase();
   const isCoachInvite = (searchParams.get('role') ?? '').toLowerCase() === 'coach';
+  // Desde la landing, "Registra tu estudio" llega con ?nuevo=1 → abre modo crear.
+  const wantsCreate = searchParams.get('nuevo') === '1';
 
-  const [mode, setMode] = useState<Mode>(invitedCeu ? 'join' : 'login');
+  const [mode, setMode] = useState<Mode>(invitedCeu ? 'join' : wantsCreate ? 'create' : 'login');
 
   const [fullName, setFullName] = useState('');
   const [studioName, setStudioName] = useState('');
