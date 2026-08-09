@@ -18,9 +18,25 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 // Registra el service worker (habilita "instalar app" y las notificaciones push).
 if ('serviceWorker' in navigator) {
+  // Si ya había un SW controlando, una versión nueva que tome el control
+  // significa que hay que recargar UNA vez para mostrar la app actualizada
+  // (evita quedarse pegado en una versión vieja). En la primera instalación
+  // (sin controlador previo) NO se recarga.
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      /* si falla el registro, la app sigue funcionando normal */
-    });
+    // updateViaCache: 'none' → el navegador siempre revalida /sw.js (no lo sirve
+    // desde su caché), así detecta versiones nuevas de inmediato.
+    navigator.serviceWorker
+      .register('/sw.js', { updateViaCache: 'none' })
+      .then((reg) => reg.update().catch(() => {}))
+      .catch(() => {
+        /* si falla el registro, la app sigue funcionando normal */
+      });
   });
 }
