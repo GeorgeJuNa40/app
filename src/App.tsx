@@ -42,6 +42,8 @@ function lazyWithReload<T extends ComponentType<unknown>>(
 }
 
 const OnboardingScreen = lazyWithReload(() => import('./features/onboarding/OnboardingScreen'));
+// Pantalla para fijar nueva contraseña (llega desde el correo de recuperación).
+const ResetPassword = lazyWithReload(() => import('./features/onboarding/ResetPassword'));
 // Landing pública (cara comercial) que se muestra en el dominio sin sesión.
 const Landing = lazyWithReload(() => import('./features/public/Landing'));
 // Página pública informativa del estudio (sin login).
@@ -102,7 +104,7 @@ function RequireRole({ role, children }: { role: Role; children: React.ReactNode
 }
 
 export default function App() {
-  const { currentUser, authLoading } = useStore();
+  const { currentUser, authLoading, recoveryMode } = useStore();
 
   // Al volver de Stripe (?pago=exito / ?suscripcion=exito): avisa y refresca los
   // datos (el webhook ya creó el registro en el servidor).
@@ -142,6 +144,17 @@ export default function App() {
   // Mientras se verifica la sesión, muestra una pantalla de carga simple.
   if (authLoading) {
     return <Splash />;
+  }
+
+  // Recuperación de contraseña: si el usuario llegó desde el correo de
+  // "restablecer", mostramos SIEMPRE la pantalla para fijar la nueva contraseña
+  // (tiene prioridad sobre el resto, aunque ya exista sesión de recuperación).
+  if (recoveryMode) {
+    return (
+      <Suspense fallback={<Splash />}>
+        <ResetPassword />
+      </Suspense>
+    );
   }
 
   return (

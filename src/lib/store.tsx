@@ -88,6 +88,10 @@ interface StoreValue {
   signUp: (input: SignUpInput) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  // Recuperación de contraseña
+  recoveryMode: boolean; // true cuando el usuario llegó desde el correo de "restablecer"
+  sendPasswordReset: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
   // Selectors
   seatsLeft: (sessionId: string) => number;
   studioUsers: (role: User['role']) => User[];
@@ -163,6 +167,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [db, setDb] = useState<Database>(emptyDatabase);
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [recoveryMode, setRecoveryMode] = useState(false);
 
   // Escucha la sesión de Supabase (inicio/cierre) y la mantiene al recargar.
   useEffect(() => {
@@ -170,8 +175,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       if (!data.session) setAuthLoading(false);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
+      // Si el usuario llegó desde el correo de "restablecer contraseña", Supabase
+      // abre una sesión temporal de recuperación: mostramos la pantalla para
+      // fijar la nueva contraseña (App.tsx la prioriza sobre todo lo demás).
+      if (event === 'PASSWORD_RECOVERY') setRecoveryMode(true);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -375,6 +384,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     async logout() {
       await supabase.auth.signOut();
+    },
+    recoveryMode,
+    async sendPasswordReset(email) {
+      // Envía el correo con el enlace para restablecer. Al abrirlo, Supabase
+      // regresa a la app con una sesión de recuperación (evento PASSWORD_RECOVERY).
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: window.location.origin,
+      });
+      if (error) throw error;
+    },
+    async updatePassword(newPassword) {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setRecoveryMode(false);
     },
 
     seatsLeft(sessionId) {

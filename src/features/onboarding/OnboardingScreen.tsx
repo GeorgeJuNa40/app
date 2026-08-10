@@ -3,12 +3,12 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useStore } from '../../lib/store';
 import { COUNTRIES, DEFAULT_COUNTRY_ISO, getCountry } from '../../lib/countries';
 
-type Mode = 'login' | 'join' | 'create';
+type Mode = 'login' | 'join' | 'create' | 'forgot';
 
 // Pantalla de inicio: registro real (crear estudio o unirse por CEU) e inicio
 // de sesión, contra Supabase. La redirección la hace App.tsx según el rol.
 export default function OnboardingScreen() {
-  const { signIn, signUp } = useStore();
+  const { signIn, signUp, sendPasswordReset } = useStore();
   // Si el alumno llega por un link de invitación (?ceu=XXXX), pre-llenamos el
   // código y abrimos directamente el modo "unirse".
   const [searchParams] = useSearchParams();
@@ -31,6 +31,7 @@ export default function OnboardingScreen() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [sentReset, setSentReset] = useState(false); // ya se envió el correo de recuperación
 
   // Al cambiar de modo limpiamos la contraseña (y datos sensibles) para que los
   // campos no arrastren lo tecleado antes. El navegador seguirá ofreciendo tus
@@ -40,6 +41,7 @@ export default function OnboardingScreen() {
     setPassword('');
     setPhone('');
     setBirthDate('');
+    setSentReset(false);
     setMode(m);
   };
 
@@ -48,7 +50,11 @@ export default function OnboardingScreen() {
     setError('');
     setBusy(true);
     try {
-      if (mode === 'login') {
+      if (mode === 'forgot') {
+        if (!email.trim()) throw new Error('Escribe tu correo.');
+        await sendPasswordReset(email);
+        setSentReset(true);
+      } else if (mode === 'login') {
         await signIn(email, password);
       } else {
         const country = getCountry(countryIso);
@@ -96,24 +102,28 @@ export default function OnboardingScreen() {
           <h1 className="text-2xl font-bold text-ink">
             {mode === 'login'
               ? 'Bienvenido de nuevo'
-              : mode === 'create'
-                ? 'Crea tu estudio'
-                : isCoachInvite
-                  ? 'Únete como coach'
-                  : 'Únete a tu estudio'}
+              : mode === 'forgot'
+                ? 'Recupera tu contraseña'
+                : mode === 'create'
+                  ? 'Crea tu estudio'
+                  : isCoachInvite
+                    ? 'Únete como coach'
+                    : 'Únete a tu estudio'}
           </h1>
           <p className="text-ink-faint mt-1 mb-6">
             {mode === 'login'
               ? 'Ingresa con tu correo y contraseña.'
-              : mode === 'create'
-                ? 'Registra tu estudio y empieza tu prueba.'
-                : isCoachInvite
-                  ? 'Regístrate como coach. El estudio deberá aprobarte para que empieces.'
-                  : 'Ingresa el Código de Estudio (CEU) que te dieron.'}
+              : mode === 'forgot'
+                ? 'Te enviamos un enlace a tu correo para crear una nueva contraseña.'
+                : mode === 'create'
+                  ? 'Registra tu estudio y empieza tu prueba.'
+                  : isCoachInvite
+                    ? 'Regístrate como coach. El estudio deberá aprobarte para que empieces.'
+                    : 'Ingresa el Código de Estudio (CEU) que te dieron.'}
           </p>
 
           <form onSubmit={submit} className="space-y-3">
-            {mode !== 'login' && (
+            {(mode === 'create' || mode === 'join') && (
               <Input label="Tu nombre" value={fullName} onChange={setFullName} placeholder="Ej. Ana López" required />
             )}
             {mode === 'create' && (
@@ -145,7 +155,7 @@ export default function OnboardingScreen() {
               name="email"
               autoComplete={mode === 'login' ? 'username' : 'off'}
             />
-            {mode !== 'login' && (
+            {(mode === 'create' || mode === 'join') && (
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-ink-soft">Teléfono (con código de país)</span>
                 <div className="flex gap-2">
@@ -187,6 +197,7 @@ export default function OnboardingScreen() {
                 />
               </label>
             )}
+            {mode !== 'forgot' && (
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-ink-soft">Contraseña</span>
               <div className="relative">
@@ -210,6 +221,24 @@ export default function OnboardingScreen() {
                 </button>
               </div>
             </label>
+            )}
+
+            {mode === 'login' && (
+              <button
+                type="button"
+                onClick={() => changeMode('forgot')}
+                className="block text-sm text-brand hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            )}
+
+            {mode === 'forgot' && sentReset && (
+              <p className="rounded-xl bg-mint-soft/40 px-4 py-3 text-sm text-ink-soft">
+                Listo ✓ Si <strong>{email}</strong> está registrado, te llegará un correo con el enlace
+                para crear tu nueva contraseña. Revisa también la carpeta de spam.
+              </p>
+            )}
 
             {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -218,13 +247,19 @@ export default function OnboardingScreen() {
               disabled={busy}
               className="w-full rounded-xl bg-brand px-4 py-3 font-semibold text-cream shadow-zen hover:opacity-90 disabled:opacity-60"
             >
-              {busy ? 'Un momento…' : mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
+              {busy
+                ? 'Un momento…'
+                : mode === 'login'
+                  ? 'Iniciar sesión'
+                  : mode === 'forgot'
+                    ? 'Enviar enlace de recuperación'
+                    : 'Crear cuenta'}
             </button>
           </form>
 
           {/* Cambiar de modo */}
           <div className="mt-6 space-y-2 text-sm">
-            {mode !== 'login' && (
+            {(mode === 'create' || mode === 'join') && (
               <button onClick={() => changeMode('login')} className="text-ink-faint hover:text-ink">
                 ¿Ya tienes cuenta? <span className="text-brand font-medium">Inicia sesión</span>
               </button>
