@@ -332,12 +332,18 @@ function Input({
 
 // Traduce los errores técnicos de Supabase a mensajes claros en español.
 function translateError(err: unknown): string {
-  const msg = err instanceof Error ? err.message : String(err);
+  const msg = err instanceof Error ? err.message : typeof err === 'string' ? err : '';
   if (/Invalid login credentials/i.test(msg)) return 'Correo o contraseña incorrectos.';
   if (/User already registered/i.test(msg)) return 'Ese correo ya está registrado. Inicia sesión.';
   if (/Database error saving new user/i.test(msg))
     return 'No se pudo completar el registro. Verifica que el CEU exista o el nombre del estudio.';
   if (/Password should be at least/i.test(msg)) return 'La contraseña debe tener al menos 6 caracteres.';
+  if (/rate limit|too many|only request this once|for security purposes|\bseconds\b/i.test(msg))
+    return 'Demasiados intentos. Espera un minuto e inténtalo de nuevo.';
+  if (/error sending|sending.*(email|recovery|confirmation)|recovery email|confirmation email|smtp/i.test(msg))
+    return 'No pudimos enviar el correo en este momento. Inténtalo en un minuto; si sigue, falta configurar el correo del sistema (SMTP).';
   if (/CEU/i.test(msg)) return msg;
-  return msg || 'Ocurrió un error. Inténtalo de nuevo.';
+  const clean = msg.trim();
+  if (!clean || clean === '{}' || clean === '[object Object]') return 'Ocurrió un error. Inténtalo de nuevo.';
+  return clean;
 }
