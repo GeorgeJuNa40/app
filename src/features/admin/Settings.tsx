@@ -259,6 +259,24 @@ export default function Settings() {
               </p>
             </div>
           </div>
+
+          <div className="border-t border-cream-dark pt-4">
+            <Field label={`Penalización por no asistir — monto (${b.currencyCode ?? 'USD'})`}>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                className="input"
+                value={b.noShowPenaltyUsd ?? 0}
+                onChange={(e) => setBrand({ noShowPenaltyUsd: Math.max(0, Number(e.target.value) || 0) })}
+              />
+            </Field>
+            <p className="mt-1 text-xs text-ink-faint">
+              Si el alumno <strong>no cancela y no asiste</strong>, además de perder su clase se le genera un{' '}
+              <strong>adeudo</strong> por este monto (lo cobras tú en el estudio o lo condonas desde <strong>Miembros</strong>).
+              Usa <strong>0</strong> para no cobrar penalización.
+            </p>
+          </div>
         </Card>
 
         {/* Página informativa pública (opcional — la llena el estudio) — plan Pro */}

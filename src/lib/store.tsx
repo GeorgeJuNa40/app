@@ -103,6 +103,10 @@ interface StoreValue {
   bookSession: (sessionId: string) => void;
   cancelBooking: (bookingId: string) => void;
   markAttendance: (bookingId: string, attended: boolean) => void; // el coach marca asistencia
+  // Penalizaciones (adeudos) por no asistir sin cancelar
+  pendingPenalty: (userId: string) => number; // total de adeudos sin pagar del alumno
+  settlePenalty: (bookingId: string, paid: boolean) => void; // el estudio marca el adeudo como pagado/pendiente
+  waivePenalty: (bookingId: string) => void; // el estudio condona (quita) el adeudo
   buyPackageOnline: (packageId: string, method: PaymentMethod) => void;
   redeemReward: (rewardId: string) => void;
   // Metas del alumno (las crea el propio alumno; avance por asistencia)
@@ -533,6 +537,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const booking = db.bookings.find((b) => b.id === bookingId);
       if (!booking) return;
       const status: Booking['status'] = attended ? 'ATTENDED' : 'NO_SHOW';
+      // Si el estudio configuró penalización y el alumno NO asistió (y no canceló),
+      // se le genera un adeudo. Si asiste, se limpia cualquier adeudo previo.
+      const penaltyCfg = Math.max(0, currentStudio?.branding.noShowPenaltyUsd ?? 0);
+      const penaltyUsd = attended ? 0 : penaltyCfg;
       const starId = `att-${bookingId}`;
       const entry: StarEntry = {
         id: starId,
@@ -542,7 +550,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         createdAt: new Date().toISOString(),
       };
       setDb((prev) => {
-        const bookings = prev.bookings.map((b) => (b.id === bookingId ? { ...b, status } : b));
+        const bookings = prev.bookings.map((b) =>
+          b.id === bookingId ? { ...b, status, penaltyUsd, penaltyPaid: attended ? false : (b.penaltyPaid ?? false) } : b,
+        );
         let stars = prev.stars;
         if (attended) {
           if (!stars.some((s) => s.id === starId)) stars = [...stars, entry];
@@ -551,9 +561,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
         return { ...prev, bookings, stars };
       });
-      void dbUpdate('bookings', bookingId, { status });
+      void dbUpdate('bookings', bookingId, { status, penalty_usd: penaltyUsd });
       if (attended) void dbUpsert('star_entries', rowStar(entry));
       else void dbDelete('star_entries', starId);
+    },
+    pendingPenalty(userId) {
+      return db.bookings
+        .filter((b) => b.userId === userId && !b.penaltyPaid && (b.penaltyUsd ?? 0) > 0)
+        .reduce((a, b) => a + (b.penaltyUsd ?? 0), 0);
+    },
+    settlePenalty(bookingId, paid) {
+      setDb((prev) => ({
+        ...prev,
+        bookings: prev.bookings.map((b) => (b.id === bookingId ? { ...b, penaltyPaid: paid } : b)),
+      }));
+      void dbUpdate('bookings', bookingId, { penalty_paid: paid });
+    },
+    waivePenalty(bookingId) {
+      setDb((prev) => ({
+        ...prev,
+        bookings: prev.bookings.map((b) => (b.id === bookingId ? { ...b, penaltyUsd: 0, penaltyPaid: false } : b)),
+      }));
+      void dbUpdate('bookings', bookingId, { penalty_usd: 0, penalty_paid: false });
     },
 
     buyPackageOnline(packageId, method) {

@@ -130,6 +130,8 @@ const mapBooking = (r: Row): Booking => ({
   userPackageId: r.user_package_id ?? null,
   status: r.status,
   createdAt: r.created_at,
+  penaltyUsd: Number(r.penalty_usd ?? 0),
+  penaltyPaid: r.penalty_paid ?? false,
 });
 
 const mapPayment = (r: Row): Payment => ({
@@ -324,6 +326,8 @@ export const rowBooking = (b: Booking): Row => ({
   user_package_id: b.userPackageId,
   status: b.status,
   created_at: b.createdAt,
+  penalty_usd: b.penaltyUsd ?? 0,
+  penalty_paid: b.penaltyPaid ?? false,
 });
 export const rowPayment = (p: Payment): Row => ({
   id: p.id,

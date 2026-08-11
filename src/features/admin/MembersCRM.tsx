@@ -36,7 +36,7 @@ function fmtBirthday(iso?: string): string | null {
 
 // CRM de alumnos: contacto, clases agendadas, membresía y registro de pagos.
 export default function MembersCRM() {
-  const { db, currentStudio, studioUsers, membership, registerManualPlan, isNewStudent } = useStore();
+  const { db, currentStudio, studioUsers, membership, registerManualPlan, isNewStudent, pendingPenalty, settlePenalty, waivePenalty } = useStore();
   const students = studioUsers('STUDENT');
   const packages = db.packages.filter((p) => p.studioId === currentStudio!.id && p.active);
 
@@ -202,6 +202,9 @@ export default function MembersCRM() {
               <p className="mt-1 text-xs text-ink-faint">
                 {last ? `Últ. pago: ${usd(last.amountUsd)} · ${METHOD_LABEL[last.method]} (${SOURCE_LABEL[last.registeredBy]})` : 'Sin pagos registrados'}
               </p>
+              {pendingPenalty(s.id) > 0 && (
+                <p className="mt-1 text-xs font-semibold text-amber-700">Adeudo por no asistir: {usd(pendingPenalty(s.id))}</p>
+              )}
               <div className="mt-3 flex gap-2">
                 <Button variant="secondary" className="flex-1" onClick={() => setDetail(s)}>Ver</Button>
                 <Button className="flex-1" onClick={() => setPayFor(s)}>Registrar pago</Button>
@@ -266,6 +269,44 @@ export default function MembersCRM() {
                     </div>
                   ))}
                 </div>
+
+                {(() => {
+                  const pens = db.bookings
+                    .filter((b) => b.userId === detail.id && (b.penaltyUsd ?? 0) > 0)
+                    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+                  if (pens.length === 0) return null;
+                  return (
+                    <>
+                      <h3 className="font-semibold text-ink text-sm mb-2">Adeudos por no asistir ({pens.length})</h3>
+                      <div className="space-y-1.5 mb-4 max-h-40 overflow-y-auto">
+                        {pens.map((b) => {
+                          const s = db.classSessions.find((x) => x.id === b.sessionId);
+                          return (
+                            <div key={b.id} className="flex items-center justify-between gap-2 rounded-lg bg-cream-dark/40 px-3 py-2 text-sm">
+                              <div>
+                                <p className="text-ink">
+                                  {usd(b.penaltyUsd ?? 0)}{' '}
+                                  {b.penaltyPaid ? <span className="text-green-700">· Pagado</span> : <span className="text-amber-700">· Pendiente</span>}
+                                </p>
+                                {s && <p className="text-xs text-ink-faint">Clase del {fmtDay(s.startsAt)}</p>}
+                              </div>
+                              <div className="flex shrink-0 gap-1.5">
+                                {!b.penaltyPaid ? (
+                                  <>
+                                    <Button variant="secondary" onClick={() => settlePenalty(b.id, true)}>Cobrado</Button>
+                                    <Button variant="ghost" onClick={() => waivePenalty(b.id)}>Condonar</Button>
+                                  </>
+                                ) : (
+                                  <Button variant="ghost" onClick={() => settlePenalty(b.id, false)}>Marcar pendiente</Button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                })()}
 
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" onClick={() => setDetail(null)}>Cerrar</Button>
