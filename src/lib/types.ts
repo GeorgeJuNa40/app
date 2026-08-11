@@ -41,6 +41,7 @@ export interface Branding {
   currencyCode?: string; // moneda local del estudio (ej. MXN); default USD
   cancellationPolicy?: string; // política de cancelación (la ve el alumno)
   cancellationHours?: number; // horas mínimas de anticipación para cancelar (candado)
+  noShowPenaltyUsd?: number; // cargo (adeudo) por no asistir sin cancelar (0/omitido = sin penalización)
   bookingCutoffMinutes?: number; // minutos antes de la clase en que se cierran las reservas
   infoPage?: StudioInfoPage; // página informativa pública (opcional, la llena el estudio)
 }
@@ -172,6 +173,8 @@ export interface Booking {
   userPackageId: string | null;
   status: BookingStatus;
   createdAt: string;
+  penaltyUsd?: number; // adeudo por no asistir/cancelar tarde (0 = sin cargo)
+  penaltyPaid?: boolean; // el estudio ya cobró/condonó ese adeudo
 }
 
 export interface Payment {

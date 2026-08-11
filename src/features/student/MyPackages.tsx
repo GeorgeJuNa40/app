@@ -8,8 +8,9 @@ import { startStripeCheckout } from '../../lib/payments';
 // Stripe (la app nunca recibe datos de tarjeta). El paquete se activa solo
 // cuando Stripe confirma el pago (vía webhook).
 export default function MyPackages() {
-  const { db, currentUser, currentStudio } = useStore();
+  const { db, currentUser, currentStudio, pendingPenalty } = useStore();
   const uid = currentUser!.id;
+  const penalty = pendingPenalty(uid); // adeudo por no asistir (si el estudio lo cobra)
   // Muestra los paquetes vigentes y los que vencieron hace máximo 1 día; los
   // más viejos se ocultan de la vista del alumno para no acumular tarjetas
   // (el historial se conserva en la base para los reportes del estudio).
@@ -30,6 +31,15 @@ export default function MyPackages() {
   return (
     <>
       <PageHeader title="Mis Paquetes" subtitle="Tus paquetes activos y el catálogo del estudio" />
+
+      {penalty > 0 && (
+        <Card className="mb-6 p-4 border-amber-200 bg-amber-50">
+          <p className="text-sm text-amber-800">
+            ⚠️ Tienes un <strong>cargo pendiente de {usd(penalty)}</strong> por reservar y no asistir sin cancelar a tiempo.
+            Cúbrelo en tu estudio para seguir al día.
+          </p>
+        </Card>
+      )}
 
       <h2 className="mb-3 font-semibold text-ink">Activos</h2>
       {myPackages.length === 0 ? (
